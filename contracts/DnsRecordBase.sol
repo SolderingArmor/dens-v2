@@ -19,22 +19,39 @@ abstract contract DnsRecordBase is IDnsRecord
     
     //========================================
     // Error codes
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER = 100;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT  = 101;
-    uint constant ERROR_EITHER_ADDRESS_OR_PUBKEY       = 102;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER     = 100;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT      = 101;
+    uint constant ERROR_EITHER_ADDRESS_OR_PUBKEY           = 102;
+    uint constant ERROR_DOMAIN_NAME_NOT_VALID              = 200;
+    uint constant ERROR_DOMAIN_IS_EXPIRED                  = 201;
+    uint constant ERROR_DOMAIN_IS_NOT_EXPIRED              = 202;
+    uint constant ERROR_CAN_NOT_PROLONGATE_YET             = 203;
+    uint constant ERROR_WRONG_REGISTRATION_TYPE            = 204;
+    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST  = 205;
+    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS  = 206;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN = 207;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID        = 208;
     
+    //========================================
+    // Events
+    event newSubdomainRegistrationRequest(uint32 dt, string domainName);
+    event newSubdomainRegistered         (uint32 dt, string domainName);
+
+    //========================================
     // Variables
     string   internal static _domainName;
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
 
+    //========================================
     // Mappings
     mapping(uint256 => string) _subdomainRegRequests; // sub-domain registration requests;
 
+    //========================================
     // Getters
     function getWhois()               external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
     //
-    function getDomainName()          external view override returns (string    ) {    return _domainName;                             }
+    function getDomainName()          external view override returns (string    ) {    return _whoisInfo.domainName;                   }
     function getDomainCode()          external view override returns (TvmCell   ) {    return _domainCode;                             }
     //
     function getEndpointAddress()     external view override returns (address   ) {    return _whoisInfo.endpointAddress;              }
@@ -72,10 +89,18 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired
     {
-        require(newType < REG_TYPE.NUM, 8888);
+        require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);
         
         tvm.accept();
         _whoisInfo.registrationType = newType;
+    }
+
+    //========================================
+    //
+    function changeComment(string newComment) external override onlyOwner notExpired
+    {
+        tvm.accept();
+        _whoisInfo.comment = newComment;
     }
 
     //========================================
@@ -85,7 +110,7 @@ abstract contract DnsRecordBase is IDnsRecord
         bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
         bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
 
-        require(byPubKey || byAddress, 6565);
+        require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
         
         tvm.accept();
         _whoisInfo.ownerAddress    = newOwnerAddress;
@@ -97,6 +122,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
     {
+        tvm.accept();
         _whoisInfo.subdomainRegPrice = price;
     }
 
@@ -104,7 +130,7 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function prolongate() external override onlyOwner notExpired
     {
-        require(canProlongate(), 9876);
+        require(canProlongate(), ERROR_CAN_NOT_PROLONGATE_YET);
         
         tvm.accept();
         _whoisInfo.dtExpires += ninetyDays;
@@ -156,13 +182,13 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function _validateDomainName(string domainName) internal pure returns (bool)
     {
-        require(domainName.byteLength() > 1, 5555);
+        require(domainName.byteLength() > 1, ERROR_DOMAIN_NAME_NOT_VALID);
 
         // TODO: do we need to check length and number of segments and empty segments?
 
         for(uint256 i = 0; i < domainName.byteLength(); i++)
         {
-            byte letter = bytes(domainName.substr(i, 1))[0];
+            byte letter  = bytes(domainName.substr(i, 1))[0];
             bool numbers = (letter >= 0x30 && letter <= 0x39);
             bool lower   = (letter >= 0x61 && letter <= 0x7A);
             bool slash   = (letter == 0x2F);
@@ -181,19 +207,19 @@ abstract contract DnsRecordBase is IDnsRecord
     ///
     /// @param domainName - domain name;
     ///
-    /// @return bytes[]: parsed domain name into segments;
-    ///         bytes:   parent domain name;
+    /// @return string[]: parsed domain name (into segments);
+    ///         string:   parent domain name;
     //
     function _parseDomainName(string domainName) internal pure returns (string[], string)
     {
         // TODO: do we need to spend gas here every time?
-        require(_validateDomainName(domainName) == true, 5555);
+        require(_validateDomainName(domainName) == true, ERROR_DOMAIN_NAME_NOT_VALID);
 
         // Parse to segments
-        string[] segments    = splitString(domainName);
-        uint lastSegmentName = segments[segments.length-1].byteLength();
-        uint256 parentLength = domainName.byteLength() - lastSegmentName - 1;
-        string parentName    = (segments.length == 1 ? domainName : domainName.substr(0, parentLength));
+        string[] segments      = splitString(domainName);
+        uint32 lastSegmentName = segments[segments.length-1].byteLength();
+        uint32 parentLength    = domainName.byteLength() - lastSegmentName - 1;
+        string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength + 1));
 
         // ...
         return (segments, parentName);
@@ -207,19 +233,19 @@ abstract contract DnsRecordBase is IDnsRecord
         bool byPubKey  = (_whoisInfo.ownerPubkey == msg.pubkey() && _whoisInfo.ownerAddress == addressZero);
         bool byAddress = (_whoisInfo.ownerPubkey == 0            && _whoisInfo.ownerAddress == msg.sender );
 
-        require(byPubKey || byAddress, 7777);
+        require(byPubKey || byAddress, ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER);
         _;
     }
 
     modifier onlyRoot
     {
-        require(_whoisInfo.parentDomainAddress == msg.sender, 7778);
+        require(_whoisInfo.parentDomainAddress == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT);
         _;
     }
 
     modifier notExpired
     {
-        require(!isExpired(), 7779);
+        require(!isExpired(), ERROR_DOMAIN_IS_EXPIRED);
         _;
     }
 

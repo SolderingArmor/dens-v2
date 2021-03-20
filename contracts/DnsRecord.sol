@@ -1,4 +1,4 @@
-pragma ton-solidity >= 0.38.0;
+pragma ton-solidity >=0.38.2;
 pragma AbiHeader time;
 pragma AbiHeader pubkey;
 pragma AbiHeader expire;
@@ -34,31 +34,27 @@ contract DnsRecord is DnsRecordBase
     //
     constructor(address ownerAddress, uint256 ownerPubkey) public 
     {
-        require(_validateDomainName(_domainName), 7777);
-
-        tvm.accept();
-        (bytes[] segments, bytes parentName) = _parseDomainName(_domainName);
+        // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
+        // Be sure that you use a valid "_domainName", otherwise you will loose your Crystyals;
         
-        _whoisInfo.ownerAddress           = ownerAddress;
-        _whoisInfo.ownerPubkey            = ownerPubkey;
-        _whoisInfo.registrationType       = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after this domain registration;
-        _whoisInfo.segmentsCount          = uint8(segments.length);
-        _whoisInfo.parentDomainName       = parentName;
-       (_whoisInfo.parentDomainAddress, ) = calculateDomainAddress(parentName);
+        tvm.accept();
+        require(_validateDomainName(_domainName), ERROR_DOMAIN_NAME_NOT_VALID);
 
-        // if it is a ROOT domain name
-        if(_whoisInfo.segmentsCount == 1) 
-        {
-            // Root domains won't need approval, internal callback right away
-            _callbackOnRegistrationRequest(REG_RESULT.APPROVED);
-        }
+        (bytes[] segments, bytes parentName) = _parseDomainName(_domainName);
+        _whoisInfo.segmentsCount             = uint8(segments.length);
+        _whoisInfo.domainName                = _domainName;
+        _whoisInfo.parentDomainName          = parentName;
+       (_whoisInfo.parentDomainAddress, )    = calculateDomainAddress(parentName);
+        
+        // Registering a new domain is the same as claiming the expired from this point:
+        claimExpired(ownerAddress, ownerPubkey);
     }
 
     //========================================
     //
-    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey) external override 
+    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey) public override 
     {
-        require(isExpired(), 6544);
+        require(isExpired(), ERROR_DOMAIN_IS_NOT_EXPIRED);
         tvm.accept();
 
         _whoisInfo.ownerAddress     = newOwnerAddress;
@@ -76,23 +72,34 @@ contract DnsRecord is DnsRecordBase
         }
     }
     
+    //========================================
+    //
     function sendRegistrationRequest(uint128 tonsToInclude) external override onlyOwner notExpired
     {
-        uint128 tonsWithGas = gasToValue(10000, 0);
+        // TODO:
+        tvm.accept();
+        uint128 tonsWithGas = 0 + tonsToInclude;// + gasToValue(10000, 0);
         IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsWithGas, callback: IDnsRecord.callbackOnRegistrationRequest}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey);
     }
     
+    //========================================
+    //
     function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible override returns (REG_RESULT)
     {
         // TODO:
-        // 1. Check if the request exists, fast and easy
+        // 1. Check if the request exists;
         uint256 nameHash = tvm.hash(domainName);
-        require(!_subdomainRegRequests.exists(nameHash), 6661); // already_exists
+        require(!_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS);
 
-        // 2. Check if the request came from right domain
+        // 2. Check if it is really my subdomain;
+        (, string parentName) = _parseDomainName(domainName);
+        require(parentName == _whoisInfo.domainName, ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN);
+
+        // 3. Check if the request came from domain itself;
         (address addr, ) = calculateDomainAddress(domainName);
-        require(addr == msg.sender, 6661);
+        require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
 
+        // Calculate the result based on registration type;
         REG_RESULT result;
              if(_whoisInfo.registrationType == REG_TYPE.FFA)    {    result = REG_RESULT.APPROVED;    }
         else if(_whoisInfo.registrationType == REG_TYPE.DENY)   {    result = REG_RESULT.DENIED;      }
@@ -116,10 +123,25 @@ contract DnsRecord is DnsRecordBase
             result = ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED;            
         }
 
+        // Statistics
+        if(result == REG_RESULT.APPROVED)
+        {
+            // 1.
+            _whoisInfo.subdomainRegCount += 1;
+            
+            // 2.
+            if(_whoisInfo.registrationType == REG_TYPE.MONEY)
+            {
+                _whoisInfo.totalFeesCollected += _whoisInfo.subdomainRegPrice;
+            }
+        }
+
         // Return the change
         return{value: 0, flag: 64}(result);
     }
     
+    //========================================
+    //
     function _callbackOnRegistrationRequest(REG_RESULT result) internal
     {
         _whoisInfo.lastRegResult = result;
@@ -142,9 +164,10 @@ contract DnsRecord is DnsRecordBase
         { }
     }
 
-    function callbackOnRegistrationRequest(REG_RESULT result) external override 
+    //========================================
+    //
+    function callbackOnRegistrationRequest(REG_RESULT result) external override onlyRoot
     {
-        require(msg.sender == _whoisInfo.parentDomainAddress, 6578);
         tvm.accept();
         _callbackOnRegistrationRequest(result);
     }
@@ -155,7 +178,7 @@ contract DnsRecord is DnsRecordBase
     {
         // Check if the request exists, fast and easy
         uint256 nameHash = tvm.hash(domainName);
-        require(_subdomainRegRequests.exists(nameHash), 6661);
+        require(_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST);
 
         tvm.accept();
 
@@ -164,6 +187,8 @@ contract DnsRecord is DnsRecordBase
         delete _subdomainRegRequests[nameHash];
     }
 
+    //========================================
+    //
     function approveRegistrationAll() external override onlyOwner notExpired
     {
         tvm.accept();
@@ -176,11 +201,13 @@ contract DnsRecord is DnsRecordBase
         delete _subdomainRegRequests;
     }
     
+    //========================================
+    //
     function denyRegistration(string domainName) external override onlyOwner notExpired
     {
         // Check if the request exists, fast and easy
         uint256 nameHash = tvm.hash(domainName);
-        require(_subdomainRegRequests.exists(nameHash), 6661);
+        require(_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST);
 
         tvm.accept();
 
@@ -189,6 +216,8 @@ contract DnsRecord is DnsRecordBase
         delete _subdomainRegRequests[nameHash];
     }
     
+    //========================================
+    //
     function denyRegistrationAll() external override onlyOwner notExpired
     {
         tvm.accept();

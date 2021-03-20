@@ -32,6 +32,7 @@ struct DnsWhois
     address endpointAddress;     //
     //
     uint8      segmentsCount;       //
+    string     domainName;          // duplicating domain name here; we can't use pointers, but it needs to be a part of Whois;
     string     parentDomainName;    //
     address    parentDomainAddress; //
     //
@@ -113,6 +114,12 @@ interface IDnsRecord
     /// @param newType - new type;
     //
     function changeRegistrationType(REG_TYPE newType) external;
+
+    /// @notice Change comment;
+    ///
+    /// @param newComment - new comment;
+    //
+    function changeComment(string newComment) external;
 
     //========================================
     // Registration
