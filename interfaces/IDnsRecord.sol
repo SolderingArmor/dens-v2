@@ -47,9 +47,10 @@ struct DnsWhois
     //
     // Statistics
     uint32     dtCreated;
-    uint32     totalOwnersNum;      // Total owners number, increases when expired domain is claimed;
-    uint32     subdomainRegCount;   // Total number of sub-domains registered;
-    uint128    totalFeesCollected;  // Total fees collected registering subdomains;
+    uint32     totalOwnersNum;       // Total owners number, increases when expired domain is claimed;
+    uint32     subdomainRegAccepted; // Total number of sub-domains registerations accepted;
+    uint32     subdomainRegDenied;   // Total number of sub-domains registerations denied;
+    uint128    totalFeesCollected;   // Total fees collected registering subdomains;
     
 }
 
@@ -58,33 +59,39 @@ struct DnsWhois
 interface IDnsRecord
 {
     //========================================
+    // Events
+    event newSubdomainRegistrationRequest(uint32 dt, string domainName);
+    event newSubdomainRegistered         (uint32 dt, string domainName);
+
+    //========================================
     // Getters
-    function getWhois()               external view returns (DnsWhois  );
+    function getWhois()                external view returns (DnsWhois  );
     //
-    function getDomainName()          external view returns (string    );
-    function getDomainCode()          external view returns (TvmCell   );
+    function getDomainName()           external view returns (string    );
+    function getDomainCode()           external view returns (TvmCell   );
     //
-    function getEndpointAddress()     external view returns (address   );
-    function getSegmentsCount()       external view returns (uint8     );
-    function getParentDomainName()    external view returns (string    );
-    function getParentDomainAddress() external view returns (address   );    
+    function getEndpointAddress()      external view returns (address   );
+    function getSegmentsCount()        external view returns (uint8     );
+    function getParentDomainName()     external view returns (string    );
+    function getParentDomainAddress()  external view returns (address   );    
     //
-    function getOwnerAddress()        external view returns (address   );
-    function getOwnerPubkey()         external view returns (uint256   );
-    function getDtLastProlongation()  external view returns (uint32    );
-    function getDtExpires()           external view returns (uint32    );
-    function getSubdomainRegPrice()   external view returns (uint128   );
-    function getRegistrationType()    external view returns (REG_TYPE  );
-    function getLastRegResult()       external view returns (REG_RESULT);
-    function getComment()             external view returns (string    );
+    function getOwnerAddress()         external view returns (address   );
+    function getOwnerPubkey()          external view returns (uint256   );
+    function getDtLastProlongation()   external view returns (uint32    );
+    function getDtExpires()            external view returns (uint32    );
+    function getSubdomainRegPrice()    external view returns (uint128   );
+    function getRegistrationType()     external view returns (REG_TYPE  );
+    function getLastRegResult()        external view returns (REG_RESULT);
+    function getComment()              external view returns (string    );
     //
-    function getDtCreated()           external view returns (uint32    );
-    function getTotalOwnersNum()      external view returns (uint32    );
-    function getSubdomainRegCount()   external view returns (uint32    );
-    function getTotalFeesCollected()  external view returns (uint128   );
+    function getDtCreated()            external view returns (uint32    );
+    function getTotalOwnersNum()       external view returns (uint32    );
+    function getSubdomainRegAccepted() external view returns (uint32    );
+    function getSubdomainRegDenied()   external view returns (uint32    );
+    function getTotalFeesCollected()   external view returns (uint128   );
     //
-    function canProlongate()          external view returns (bool      );
-    function isExpired()              external view returns (bool      );
+    function canProlongate()           external view returns (bool      );
+    function isExpired()               external view returns (bool      );
     //
 
     //========================================

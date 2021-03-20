@@ -52,6 +52,9 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
+    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
+    ///      Error: Undeclared identifier. "claimExpired" is not (or not yet) visible at this point.
+    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
     function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey) public override 
     {
         require(isExpired(), ERROR_DOMAIN_IS_NOT_EXPIRED);
@@ -106,16 +109,19 @@ contract DnsRecord is DnsRecordBase
         else if(_whoisInfo.registrationType == REG_TYPE.REQUEST)
         {
             _subdomainRegRequests[nameHash] = domainName;
-
-            // TODO: add events
-            //emit registrationRequested(now, name);
+            emit newSubdomainRegistrationRequest(now, domainName);
+            
             result = REG_RESULT.PENDING;     
         }
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
-            // TODO: revisit
-            // TODO: possibly need tvmRawReserve()
             result = (msg.value > _whoisInfo.subdomainRegPrice ? REG_RESULT.APPROVED : REG_RESULT.NOT_ENOUGH_MONEY);
+
+            if(result == REG_RESULT.APPROVED)
+            {
+                uint128 toReserve = address(this).balance - msg.value + _whoisInfo.subdomainRegPrice;
+                tvm.rawReserve(toReserve, 0); // flag 0 means "exactly X nanograms"
+            }
         }
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
@@ -127,13 +133,18 @@ contract DnsRecord is DnsRecordBase
         if(result == REG_RESULT.APPROVED)
         {
             // 1.
-            _whoisInfo.subdomainRegCount += 1;
+            _whoisInfo.subdomainRegAccepted += 1;
+            emit newSubdomainRegistered(now, domainName);
             
             // 2.
             if(_whoisInfo.registrationType == REG_TYPE.MONEY)
             {
                 _whoisInfo.totalFeesCollected += _whoisInfo.subdomainRegPrice;
             }
+        }
+        else if(result == REG_RESULT.DENIED)
+        {
+            _whoisInfo.subdomainRegDenied += 1;
         }
 
         // Return the change
@@ -184,6 +195,10 @@ contract DnsRecord is DnsRecordBase
 
         (address addr, ) = calculateDomainAddress(domainName);
         IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.APPROVED);
+
+        emit newSubdomainRegistered(now, domainName);
+        _whoisInfo.subdomainRegAccepted += 1;
+
         delete _subdomainRegRequests[nameHash];
     }
 
@@ -193,11 +208,18 @@ contract DnsRecord is DnsRecordBase
     {
         tvm.accept();
 
+        uint32 counter = 0;
+
         for( (, string domainName) : _subdomainRegRequests)
         {
             (address addr, ) = calculateDomainAddress(domainName);
             IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.APPROVED);
+
+            emit newSubdomainRegistered(now, domainName);
+            counter += 1;
         }
+
+        _whoisInfo.subdomainRegAccepted += counter;
         delete _subdomainRegRequests;
     }
     
@@ -213,6 +235,8 @@ contract DnsRecord is DnsRecordBase
 
         (address addr, ) = calculateDomainAddress(domainName);
         IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.DENIED);
+        
+        _whoisInfo.subdomainRegDenied += 1;
         delete _subdomainRegRequests[nameHash];
     }
     
@@ -222,11 +246,15 @@ contract DnsRecord is DnsRecordBase
     {
         tvm.accept();
 
+        uint32 counter = 0;
+
         for( (, string domainName) : _subdomainRegRequests)
         {
             (address addr, ) = calculateDomainAddress(domainName);
             IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.DENIED);
         }
+
+        _whoisInfo.subdomainRegDenied += counter;
         delete _subdomainRegRequests;
     }
     

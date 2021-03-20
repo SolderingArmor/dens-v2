@@ -17,6 +17,14 @@ abstract contract DnsRecordBase is IDnsRecord
     uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
     uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
     
+    uint32  constant MAX_SEGMENTS_NUMBER   = 4;
+    uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
+    uint32  constant MIN_SEGMENTS_LENGTH   = 2;
+    uint32  constant MAX_SEGMENTS_LENGTH   = 63;
+    uint32  constant MAX_DOMAIN_LENGTH     = MAX_SEGMENTS_NUMBER * MAX_SEGMENTS_LENGTH + MAX_SEPARATORS_NUMBER;
+    
+    
+
     //========================================
     // Error codes
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER     = 100;
@@ -33,11 +41,6 @@ abstract contract DnsRecordBase is IDnsRecord
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID        = 208;
     
     //========================================
-    // Events
-    event newSubdomainRegistrationRequest(uint32 dt, string domainName);
-    event newSubdomainRegistered         (uint32 dt, string domainName);
-
-    //========================================
     // Variables
     string   internal static _domainName;
     TvmCell  internal static _domainCode;
@@ -49,33 +52,34 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     // Getters
-    function getWhois()               external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
+    function getWhois()                external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
     //
-    function getDomainName()          external view override returns (string    ) {    return _whoisInfo.domainName;                   }
-    function getDomainCode()          external view override returns (TvmCell   ) {    return _domainCode;                             }
+    function getDomainName()           external view override returns (string    ) {    return _whoisInfo.domainName;                   }
+    function getDomainCode()           external view override returns (TvmCell   ) {    return _domainCode;                             }
     //
-    function getEndpointAddress()     external view override returns (address   ) {    return _whoisInfo.endpointAddress;              }
-    function getSegmentsCount()       external view override returns (uint8     ) {    return _whoisInfo.segmentsCount;                }
-    function getParentDomainName()    external view override returns (string    ) {    return _whoisInfo.parentDomainName;             }
-    function getParentDomainAddress() external view override returns (address   ) {    return _whoisInfo.parentDomainAddress;          }    
+    function getEndpointAddress()      external view override returns (address   ) {    return _whoisInfo.endpointAddress;              }
+    function getSegmentsCount()        external view override returns (uint8     ) {    return _whoisInfo.segmentsCount;                }
+    function getParentDomainName()     external view override returns (string    ) {    return _whoisInfo.parentDomainName;             }
+    function getParentDomainAddress()  external view override returns (address   ) {    return _whoisInfo.parentDomainAddress;          }    
     //
-    function getOwnerAddress()        external view override returns (address   ) {    return _whoisInfo.ownerAddress;                 }
-    function getOwnerPubkey()         external view override returns (uint256   ) {    return _whoisInfo.ownerPubkey;                  }
-    function getDtLastProlongation()  external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
-    function getDtExpires()           external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
-    function getSubdomainRegPrice()   external view override returns (uint128   ) {    return _whoisInfo.subdomainRegPrice;            }
-    function getRegistrationType()    external view override returns (REG_TYPE  ) {    return _whoisInfo.registrationType;             }
-    function getLastRegResult()       external view override returns (REG_RESULT) {    return _whoisInfo.lastRegResult;                }
-    function getComment()             external view override returns (string    ) {    return _whoisInfo.comment;                      }
+    function getOwnerAddress()         external view override returns (address   ) {    return _whoisInfo.ownerAddress;                 }
+    function getOwnerPubkey()          external view override returns (uint256   ) {    return _whoisInfo.ownerPubkey;                  }
+    function getDtLastProlongation()   external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
+    function getDtExpires()            external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
+    function getSubdomainRegPrice()    external view override returns (uint128   ) {    return _whoisInfo.subdomainRegPrice;            }
+    function getRegistrationType()     external view override returns (REG_TYPE  ) {    return _whoisInfo.registrationType;             }
+    function getLastRegResult()        external view override returns (REG_RESULT) {    return _whoisInfo.lastRegResult;                }
+    function getComment()              external view override returns (string    ) {    return _whoisInfo.comment;                      }
     //
-    function getDtCreated()           external view override returns (uint32    ) {    return _whoisInfo.dtCreated;                    }
-    function getTotalOwnersNum()      external view override returns (uint32    ) {    return _whoisInfo.totalOwnersNum;               }
-    function getSubdomainRegCount()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegCount;            }
-    function getTotalFeesCollected()  external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
+    function getDtCreated()            external view override returns (uint32    ) {    return _whoisInfo.dtCreated;                    }
+    function getTotalOwnersNum()       external view override returns (uint32    ) {    return _whoisInfo.totalOwnersNum;               }
+    function getSubdomainRegAccepted() external view override returns (uint32    ) {    return _whoisInfo.subdomainRegAccepted;         }
+    function getSubdomainRegDenied()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegDenied;           }
+    function getTotalFeesCollected()   external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
     //
-    function canProlongate()          public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
-                                                                                               now >= _whoisInfo.dtExpires - tenDays); }
-    function isExpired()              public   view override returns (bool      ) {    return  now >  _whoisInfo.dtExpires;            }
+    function canProlongate()           public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
+                                                                                                now >= _whoisInfo.dtExpires - tenDays); }
+    function isExpired()               public   view override returns (bool      ) {    return  now >  _whoisInfo.dtExpires;            }
 
     //========================================
     //
@@ -137,12 +141,12 @@ abstract contract DnsRecordBase is IDnsRecord
     }
 
     //========================================
-    /// @notice 0000;
+    /// @notice Split the string using "/" as a separator;
     /// @dev    We purposely use "byteLength()" because we know that all letters will be in a range of a single byte;
     ///
-    /// @param stringToSplit - 0000;
+    /// @param stringToSplit - string to split;
     ///
-    /// @return string[]: 0000;
+    /// @return string[]: string array (segments);
     //
     function splitString(string stringToSplit) internal pure returns(string[]) 
     {
@@ -171,10 +175,29 @@ abstract contract DnsRecordBase is IDnsRecord
 
         return finalWordsArray;
     }
-    
+
+
     //========================================
-    /// @notice 0000;
-    ///         TODO: check segments count and each segment max length;
+    /// @notice Validate domain segment length;
+    ///
+    /// @param length - segment length without separators;
+    ///
+    /// @return bool: if length is valid or not;
+    //
+    function _validateSegmentLength(uint32 length) internal pure returns (bool)
+    {
+        if(length < MIN_SEGMENTS_LENGTH || length > MAX_SEGMENTS_LENGTH)
+        {
+            // segment too short or too long, error;
+            // OR, two "/" in a row, error;
+            return false;
+        }
+
+        return true;
+    }
+
+    //========================================
+    /// @notice Validate domain name;
     ///
     /// @param domainName - domain name; can include lowercase letters, numbers and "/";
     ///
@@ -182,11 +205,16 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function _validateDomainName(string domainName) internal pure returns (bool)
     {
-        require(domainName.byteLength() > 1, ERROR_DOMAIN_NAME_NOT_VALID);
+        if(domainName.byteLength() < MIN_SEGMENTS_LENGTH || domainName.byteLength() > MAX_DOMAIN_LENGTH)
+        {
+            return false;
+        }
 
         // TODO: do we need to check length and number of segments and empty segments?
+        uint32 separatorCount   = 0;
+        uint32 lastSeparatorPos = 0;
 
-        for(uint256 i = 0; i < domainName.byteLength(); i++)
+        for(uint32 i = 0; i < domainName.byteLength(); i++)
         {
             byte letter  = bytes(domainName.substr(i, 1))[0];
             bool numbers = (letter >= 0x30 && letter <= 0x39);
@@ -195,12 +223,35 @@ abstract contract DnsRecordBase is IDnsRecord
 
             if(!numbers && !lower && !slash)
             {
-                require(false, 5556);
+                return false;
             }
+
+            if(slash)
+            {
+                separatorCount += 1;
+                uint32 len = i - lastSeparatorPos;
+                
+                // One symbol in this length is separator itself, get rid of it (only if we had one or more separators already);
+                uint32 extraSlash = (lastSeparatorPos == 0 ? 0 : 1);
+                if(len == 0 || !_validateSegmentLength(len - extraSlash)) {    return false;    }
+
+                lastSeparatorPos = i;
+            }
+        }
+
+        // last segment has no separator at the end, duplicate the check
+        uint32 extraSlash = (lastSeparatorPos == 0 ? 0 : 1);
+        uint32 len = domainName.byteLength() - lastSeparatorPos - extraSlash;
+        if(!_validateSegmentLength(len)) {    return false;    }
+
+        if(separatorCount > MAX_SEPARATORS_NUMBER)
+        {
+            return false;
         }
 
         return true;
     }
+
     //========================================
     /// @notice Parse domain name and extract segments and parent domain name; 
     ///         don't forget to validate domain first!
