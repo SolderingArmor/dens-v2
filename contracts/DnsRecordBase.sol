@@ -210,7 +210,6 @@ abstract contract DnsRecordBase is IDnsRecord
             return false;
         }
 
-        // TODO: do we need to check length and number of segments and empty segments?
         uint32 separatorCount   = 0;
         uint32 lastSeparatorPos = 0;
 

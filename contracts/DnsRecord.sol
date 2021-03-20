@@ -89,7 +89,6 @@ contract DnsRecord is DnsRecordBase
     //
     function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible override returns (REG_RESULT)
     {
-        // TODO:
         // 1. Check if the request exists;
         uint256 nameHash = tvm.hash(domainName);
         require(!_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS);
