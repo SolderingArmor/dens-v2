@@ -22,8 +22,6 @@ abstract contract DnsRecordBase is IDnsRecord
     uint32  constant MIN_SEGMENTS_LENGTH   = 2;
     uint32  constant MAX_SEGMENTS_LENGTH   = 63;
     uint32  constant MAX_DOMAIN_LENGTH     = MAX_SEGMENTS_NUMBER * MAX_SEGMENTS_LENGTH + MAX_SEPARATORS_NUMBER;
-    
-    
 
     //========================================
     // Error codes
@@ -33,18 +31,21 @@ abstract contract DnsRecordBase is IDnsRecord
     uint constant ERROR_DOMAIN_NAME_NOT_VALID              = 200;
     uint constant ERROR_DOMAIN_IS_EXPIRED                  = 201;
     uint constant ERROR_DOMAIN_IS_NOT_EXPIRED              = 202;
-    uint constant ERROR_CAN_NOT_PROLONGATE_YET             = 203;
-    uint constant ERROR_WRONG_REGISTRATION_TYPE            = 204;
-    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST  = 205;
-    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS  = 206;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN = 207;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID        = 208;
+    uint constant ERROR_DOMAIN_IS_PENDING                  = 203;
+    uint constant ERROR_DOMAIN_IS_NOT_PENDING              = 204;
+    uint constant ERROR_CAN_NOT_PROLONGATE_YET             = 205;
+    uint constant ERROR_WRONG_REGISTRATION_TYPE            = 206;
+    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST  = 207;
+    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS  = 208;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN = 209;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID        = 210;
     
     //========================================
     // Variables
     string   internal static _domainName;
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
+    bool     internal        _domainPending = false; // domain is pending when claimExpired() is called;
 
     //========================================
     // Mappings
@@ -84,7 +85,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeEndpointAddress(address newAddress) external override onlyOwner notExpired
+    function changeEndpointAddress(address newAddress) external override onlyOwner notExpired notPending
     {
         tvm.accept();
         _whoisInfo.endpointAddress = newAddress;
@@ -92,7 +93,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired
+    function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired notPending
     {
         require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);
         
@@ -102,7 +103,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeComment(string newComment) external override onlyOwner notExpired
+    function changeComment(string newComment) external override onlyOwner notExpired notPending
     {
         tvm.accept();
         _whoisInfo.comment = newComment;
@@ -110,7 +111,10 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) external override onlyOwner notExpired
+    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
+    ///      Error: Undeclared identifier. "changeOwnership" is not (or not yet) visible at this point.
+    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
+    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) public override onlyOwner notExpired notPending
     {
         bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
         bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
@@ -118,14 +122,15 @@ abstract contract DnsRecordBase is IDnsRecord
         require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
         
         tvm.accept();
-        _whoisInfo.ownerAddress    = newOwnerAddress;
-        _whoisInfo.ownerPubkey     = newOwnerPubkey;
-        _whoisInfo.endpointAddress = addressZero;
-        _whoisInfo.comment         = "";
-        _whoisInfo.totalOwnersNum += 1;
+        _whoisInfo.ownerAddress     = newOwnerAddress;
+        _whoisInfo.ownerPubkey      = newOwnerPubkey;
+        _whoisInfo.endpointAddress  = addressZero;
+        _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
+        _whoisInfo.comment          = "";
+        _whoisInfo.totalOwnersNum  += 1;
     }
 
-    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
+    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired notPending
     {
         tvm.accept();
         _whoisInfo.subdomainRegPrice = price;
@@ -133,7 +138,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function prolongate() external override onlyOwner notExpired
+    function prolongate() external override onlyOwner notExpired notPending
     {
         require(canProlongate(), ERROR_CAN_NOT_PROLONGATE_YET);
         
@@ -187,10 +192,9 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function _validateSegmentLength(uint32 length) internal pure returns (bool)
     {
+        // segment too short or too long, or two "/" in a row, error;
         if(length < MIN_SEGMENTS_LENGTH || length > MAX_SEGMENTS_LENGTH)
         {
-            // segment too short or too long, error;
-            // OR, two "/" in a row, error;
             return false;
         }
 
@@ -258,7 +262,7 @@ abstract contract DnsRecordBase is IDnsRecord
     ///
     /// @param domainName - domain name;
     ///
-    /// @return string[]: parsed domain name (into segments);
+    /// @return string[]: parsed domain name (segments);
     ///         string:   parent domain name;
     //
     function _parseDomainName(string domainName) internal pure returns (string[], string)
@@ -269,7 +273,6 @@ abstract contract DnsRecordBase is IDnsRecord
         uint32 parentLength    = domainName.byteLength() - lastSegmentName - 1;
         string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength + 1));
 
-        // ...
         return (segments, parentName);
     }
 
@@ -294,6 +297,18 @@ abstract contract DnsRecordBase is IDnsRecord
     modifier notExpired
     {
         require(!isExpired(), ERROR_DOMAIN_IS_EXPIRED);
+        _;
+    }
+
+    modifier isPending
+    {
+        require(_domainPending, ERROR_DOMAIN_IS_NOT_PENDING);
+        _;
+    }
+
+    modifier notPending
+    {
+        require(!_domainPending, ERROR_DOMAIN_IS_PENDING);
         _;
     }
 

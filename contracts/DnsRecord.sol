@@ -60,12 +60,9 @@ contract DnsRecord is DnsRecordBase
         require(isExpired(), ERROR_DOMAIN_IS_NOT_EXPIRED);
         tvm.accept();
 
-        _whoisInfo.ownerAddress     = newOwnerAddress;
-        _whoisInfo.ownerPubkey      = newOwnerPubkey;
-        _whoisInfo.endpointAddress  = addressZero;
-        _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after this domain registration;
-        _whoisInfo.comment          = "";
-        _whoisInfo.totalOwnersNum  += 1;
+        changeOwnership(newOwnerAddress, newOwnerPubkey);
+        _domainPending       = true;
+        _whoisInfo.dtExpires = now + tenDays; // you have 10 days after claim to finish the registration (get approval from root domain) of your subdomain;
 
         // if it is a ROOT domain name
         if(_whoisInfo.segmentsCount == 1) 
@@ -77,7 +74,7 @@ contract DnsRecord is DnsRecordBase
     
     //========================================
     //
-    function sendRegistrationRequest(uint128 tonsToInclude) external override onlyOwner notExpired
+    function sendRegistrationRequest(uint128 tonsToInclude) external override onlyOwner notExpired isPending
     {
         tvm.accept();
         IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey);
@@ -155,6 +152,7 @@ contract DnsRecord is DnsRecordBase
     function _callbackOnRegistrationRequest(REG_RESULT result) internal
     {
         _whoisInfo.lastRegResult = result;
+        _domainPending           = false;            
         
         if(result == REG_RESULT.APPROVED)
         {
@@ -184,7 +182,7 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function approveRegistration(string domainName) external override onlyOwner notExpired
+    function approveRegistration(string domainName) external override onlyOwner notExpired notPending
     {
         // Check if the request exists, fast and easy
         uint256 nameHash = tvm.hash(domainName);
@@ -203,7 +201,7 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function approveRegistrationAll() external override onlyOwner notExpired
+    function approveRegistrationAll() external override onlyOwner notExpired notPending
     {
         tvm.accept();
 
@@ -224,7 +222,7 @@ contract DnsRecord is DnsRecordBase
     
     //========================================
     //
-    function denyRegistration(string domainName) external override onlyOwner notExpired
+    function denyRegistration(string domainName) external override onlyOwner notExpired notPending
     {
         // Check if the request exists, fast and easy
         uint256 nameHash = tvm.hash(domainName);
@@ -241,7 +239,7 @@ contract DnsRecord is DnsRecordBase
     
     //========================================
     //
-    function denyRegistrationAll() external override onlyOwner notExpired
+    function denyRegistrationAll() external override onlyOwner notExpired notPending
     {
         tvm.accept();
 
@@ -259,7 +257,7 @@ contract DnsRecord is DnsRecordBase
     
     //========================================
     //
-    function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired
+    function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired notPending
     {        
         tvm.accept();
 

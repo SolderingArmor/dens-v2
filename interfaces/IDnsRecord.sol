@@ -29,7 +29,7 @@ enum REG_RESULT
 // 
 struct DnsWhois
 {
-    address endpointAddress;     //
+    address    endpointAddress;     //
     //
     uint8      segmentsCount;       //
     string     domainName;          // duplicating domain name here; we can't use pointers, but it needs to be a part of Whois;
@@ -124,6 +124,7 @@ interface IDnsRecord
     function changeRegistrationType(REG_TYPE newType) external;
 
     /// @notice Change comment;
+    ///         Keep in mind that you will have to pay larger storage fees for huge comments;
     ///
     /// @param newComment - new comment;
     //
@@ -148,6 +149,8 @@ interface IDnsRecord
     ///         If parent registration type is              REG_TYPE.MONEY, parent pays for gas and all extra included TONs (apart from "_whoisInfo.subdomainRegPrice") are considered as a tip and are not returned;
     ///         If parent registration type is anything but REG_TYPE.MONEY, you need to pay for the gas and parent domain will return the change after processing;
     ///         In any case, "tonsToInclude" should always be enough to pay for the gas;
+    ///
+    /// @dev You can't spam "sendRegistrationRequest" after domain was registered because domain needs to be pending;
     ///
     /// @param tonsToInclude - TONs to include in message value; TONs need to be available on this account when sending;
     //
