@@ -254,7 +254,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     /// @notice Parse domain name and extract segments and parent domain name; 
-    ///         don't forget to validate domain first!
+    ///         Don't forget to validate domain first (if needed)!
     ///
     /// @param domainName - domain name;
     ///
@@ -263,9 +263,6 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function _parseDomainName(string domainName) internal pure returns (string[], string)
     {
-        // TODO: do we need to spend gas here every time?
-        require(_validateDomainName(domainName) == true, ERROR_DOMAIN_NAME_NOT_VALID);
-
         // Parse to segments
         string[] segments      = splitString(domainName);
         uint32 lastSegmentName = segments[segments.length-1].byteLength();
