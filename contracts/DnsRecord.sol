@@ -45,6 +45,7 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.domainName                  = _domainName;
         _whoisInfo.parentDomainName            = parentName;
        (_whoisInfo.parentDomainAddress, )      = calculateDomainAddress(parentName);
+        _whoisInfo.dtExpires                   = 0; // sanity
         
         // Registering a new domain is the same as claiming the expired from this point:
         claimExpired(ownerAddress, ownerPubkey);
@@ -99,7 +100,7 @@ contract DnsRecord is DnsRecordBase
 
         //========================================
         // REG_TYPE.MONEY has a custom flow;
-        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value > _whoisInfo.subdomainRegPrice)
+        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value >= _whoisInfo.subdomainRegPrice)
         {
             tvm.accept();
             _whoisInfo.subdomainRegAccepted += 1;
@@ -123,7 +124,8 @@ contract DnsRecord is DnsRecordBase
         }
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
-            result = (msg.value > _whoisInfo.subdomainRegPrice ? REG_RESULT.APPROVED : REG_RESULT.NOT_ENOUGH_MONEY);
+            // If we are here that means "REG_TYPE.MONEY" custom flow was unsuccessful;
+            result = REG_RESULT.NOT_ENOUGH_MONEY;
         }
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
@@ -152,29 +154,34 @@ contract DnsRecord is DnsRecordBase
     function _callbackOnRegistrationRequest(REG_RESULT result) internal
     {
         _whoisInfo.lastRegResult = result;
-        _domainPending           = false;
         
         if(result == REG_RESULT.APPROVED)
         {
             _whoisInfo.dtExpires = (now + ninetyDays);
+            _domainPending       = false;
         }
         else if(result == REG_RESULT.PENDING)
         {
-            //
+            _domainPending = true;
         }
         else if(result == REG_RESULT.DENIED)
         {
+            // Domain ownership is reset
             _whoisInfo.ownerAddress = addressZero;
             _whoisInfo.ownerPubkey  = 0;
             _whoisInfo.dtExpires    = 0;
+            _domainPending          = false;
         }
         else if(result == REG_RESULT.NOT_ENOUGH_MONEY)
-        { }
+        { 
+            // You can have another try
+            _domainPending = true;
+        }
     }
 
     //========================================
     //
-    function callbackOnRegistrationRequest(REG_RESULT result) external override onlyRoot
+    function callbackOnRegistrationRequest(REG_RESULT result) external override onlyRoot isPending
     {
         tvm.accept();
         _callbackOnRegistrationRequest(result);
