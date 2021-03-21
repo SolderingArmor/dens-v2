@@ -268,10 +268,15 @@ abstract contract DnsRecordBase is IDnsRecord
     function _parseDomainName(string domainName) internal pure returns (string[], string)
     {
         // Parse to segments
-        string[] segments      = splitString(domainName);
+        string[] segments = splitString(domainName);
+        if(segments.length == 0)
+        {
+            return(segments, "");
+        }
+        
         uint32 lastSegmentName = segments[segments.length-1].byteLength();
         uint32 parentLength    = domainName.byteLength() - lastSegmentName - 1;
-        string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength + 1));
+        string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength - 1));
 
         return (segments, parentName);
     }

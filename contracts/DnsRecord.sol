@@ -40,11 +40,11 @@ contract DnsRecord is DnsRecordBase
         tvm.accept();
         require(_validateDomainName(_domainName), ERROR_DOMAIN_NAME_NOT_VALID);
 
-        (bytes[] segments, bytes parentName) = _parseDomainName(_domainName);
-        _whoisInfo.segmentsCount             = uint8(segments.length);
-        _whoisInfo.domainName                = _domainName;
-        _whoisInfo.parentDomainName          = parentName;
-       (_whoisInfo.parentDomainAddress, )    = calculateDomainAddress(parentName);
+        (string[] segments, string parentName) = _parseDomainName(_domainName);
+        _whoisInfo.segmentsCount               = uint8(segments.length);
+        _whoisInfo.domainName                  = _domainName;
+        _whoisInfo.parentDomainName            = parentName;
+       (_whoisInfo.parentDomainAddress, )      = calculateDomainAddress(parentName);
         
         // Registering a new domain is the same as claiming the expired from this point:
         claimExpired(ownerAddress, ownerPubkey);
@@ -119,7 +119,7 @@ contract DnsRecord is DnsRecordBase
             _subdomainRegRequests[nameHash] = domainName;
             emit newSubdomainRegistrationRequest(now, domainName);
             
-            result = REG_RESULT.PENDING;     
+            result = REG_RESULT.PENDING;
         }
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
@@ -128,7 +128,7 @@ contract DnsRecord is DnsRecordBase
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
             bool ownerCalled = (ownerAddress == _whoisInfo.ownerAddress && ownerPubkey == _whoisInfo.ownerPubkey);
-            result = ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED;            
+            result = ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED;
         }
 
         // Statistics
@@ -152,7 +152,7 @@ contract DnsRecord is DnsRecordBase
     function _callbackOnRegistrationRequest(REG_RESULT result) internal
     {
         _whoisInfo.lastRegResult = result;
-        _domainPending           = false;            
+        _domainPending           = false;
         
         if(result == REG_RESULT.APPROVED)
         {
@@ -258,7 +258,7 @@ contract DnsRecord is DnsRecordBase
     //========================================
     //
     function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired notPending
-    {        
+    {
         tvm.accept();
 
         dest.transfer(amount, false);
