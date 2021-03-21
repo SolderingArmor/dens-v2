@@ -61,10 +61,11 @@ interface IDnsRecord
     //========================================
     // Events
     event newSubdomainRegistrationRequest(uint32 dt, string domainName);
-    event newSubdomainRegistered         (uint32 dt, string domainName);
+    event newSubdomainRegistered         (uint32 dt, string domainName, uint128 price);
 
     //========================================
     // Getters
+    function fetchWhois()  external view responsible returns (DnsWhois  );
     function getWhois()                external view returns (DnsWhois  );
     //
     function getDomainName()           external view returns (string    );
@@ -144,9 +145,11 @@ interface IDnsRecord
     
     /// @notice Send a registration request to a parent DomainRecord;
     ///         Can be called however times needed;
-    ///         Parent domain won't return you ANY change, attach TONs carefully;
+    ///         If parent registration type is              REG_TYPE.MONEY, parent pays for gas and all extra included TONs (apart from "_whoisInfo.subdomainRegPrice") are considered as a tip and are not returned;
+    ///         If parent registration type is anything but REG_TYPE.MONEY, you need to pay for the gas and parent domain will return the change after processing;
+    ///         In any case, "tonsToInclude" should always be enough to pay for the gas;
     ///
-    /// @param tonsToInclude - TONs to include in message value; TONs need to be present on this account when sending;
+    /// @param tonsToInclude - TONs to include in message value; TONs need to be available on this account when sending;
     //
     function sendRegistrationRequest(uint128 tonsToInclude) external; 
     

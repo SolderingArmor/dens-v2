@@ -79,16 +79,15 @@ contract DnsRecord is DnsRecordBase
     //
     function sendRegistrationRequest(uint128 tonsToInclude) external override onlyOwner notExpired
     {
-        // TODO:
         tvm.accept();
-        uint128 tonsWithGas = 0 + tonsToInclude;// + gasToValue(10000, 0);
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsWithGas, callback: IDnsRecord.callbackOnRegistrationRequest}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey);
     }
     
     //========================================
     //
     function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible override returns (REG_RESULT)
     {
+        //========================================
         // 1. Check if the request exists;
         uint256 nameHash = tvm.hash(domainName);
         require(!_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS);
@@ -101,7 +100,20 @@ contract DnsRecord is DnsRecordBase
         (address addr, ) = calculateDomainAddress(domainName);
         require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
 
-        // Calculate the result based on registration type;
+        //========================================
+        // REG_TYPE.MONEY has a custom flow;
+        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value > _whoisInfo.subdomainRegPrice)
+        {
+            tvm.accept();
+            _whoisInfo.subdomainRegAccepted += 1;
+            _whoisInfo.totalFeesCollected   += _whoisInfo.subdomainRegPrice;
+            emit newSubdomainRegistered(now, domainName, _whoisInfo.subdomainRegPrice);
+            
+            return{value: 0, flag: 0}(REG_RESULT.APPROVED); // we don't return ANY change in this case
+        }
+
+        //========================================
+        // General flow;
         REG_RESULT result;
              if(_whoisInfo.registrationType == REG_TYPE.FFA)    {    result = REG_RESULT.APPROVED;    }
         else if(_whoisInfo.registrationType == REG_TYPE.DENY)   {    result = REG_RESULT.DENIED;      }
@@ -115,12 +127,6 @@ contract DnsRecord is DnsRecordBase
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
             result = (msg.value > _whoisInfo.subdomainRegPrice ? REG_RESULT.APPROVED : REG_RESULT.NOT_ENOUGH_MONEY);
-
-            if(result == REG_RESULT.APPROVED)
-            {
-                uint128 toReserve = address(this).balance - msg.value + _whoisInfo.subdomainRegPrice;
-                tvm.rawReserve(toReserve, 0); // flag 0 means "exactly X nanograms"
-            }
         }
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
@@ -133,13 +139,7 @@ contract DnsRecord is DnsRecordBase
         {
             // 1.
             _whoisInfo.subdomainRegAccepted += 1;
-            emit newSubdomainRegistered(now, domainName);
-            
-            // 2.
-            if(_whoisInfo.registrationType == REG_TYPE.MONEY)
-            {
-                _whoisInfo.totalFeesCollected += _whoisInfo.subdomainRegPrice;
-            }
+            emit newSubdomainRegistered(now, domainName, 0);
         }
         else if(result == REG_RESULT.DENIED)
         {
@@ -195,7 +195,7 @@ contract DnsRecord is DnsRecordBase
         (address addr, ) = calculateDomainAddress(domainName);
         IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.APPROVED);
 
-        emit newSubdomainRegistered(now, domainName);
+        emit newSubdomainRegistered(now, domainName, 0);
         _whoisInfo.subdomainRegAccepted += 1;
 
         delete _subdomainRegRequests[nameHash];
@@ -214,7 +214,7 @@ contract DnsRecord is DnsRecordBase
             (address addr, ) = calculateDomainAddress(domainName);
             IDnsRecord(addr).callbackOnRegistrationRequest(REG_RESULT.APPROVED);
 
-            emit newSubdomainRegistered(now, domainName);
+            emit newSubdomainRegistered(now, domainName, 0);
             counter += 1;
         }
 

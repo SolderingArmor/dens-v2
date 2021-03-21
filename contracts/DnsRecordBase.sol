@@ -52,6 +52,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     // Getters
+    function fetchWhois()  external view responsible override returns (DnsWhois  ) {    return{value: 0, flag: 64}(_whoisInfo);         }
     function getWhois()                external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
     //
     function getDomainName()           external view override returns (string    ) {    return _whoisInfo.domainName;                   }
