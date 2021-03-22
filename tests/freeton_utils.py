@@ -40,6 +40,11 @@ def getLocalVariables(abiPath, tvcPath):
 
 # ==============================================================================
 #
+def stringToHex(inputString):
+    return "".join(hex(ord(x))[2:] for x in inputString)
+
+# ==============================================================================
+#
 def getCodeFromTvc(tvcPath):
     tvc           = getTvc(tvcPath)
     tvcCodeParams = ParamsOfGetCodeFromTvc(tvc=tvc)
