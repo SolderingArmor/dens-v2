@@ -14,7 +14,6 @@ abstract contract DnsRecordBase is IDnsRecord
     //========================================
     // Constants
     address constant addressZero = address.makeAddrStd(0, 0); //
-    uint32  constant fiveMinutes = 60 * 5;                    // 5  minutes in seconds
     uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days    in seconds
     uint32  constant ninetyDays  = tenDays * 9;               // 90 days    in seconds
     
@@ -47,7 +46,6 @@ abstract contract DnsRecordBase is IDnsRecord
     string   internal static _domainName;
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
-    bool     internal        _domainPending = false; // domain is pending when claimExpired() is called;
 
     //========================================
     // Getters
@@ -128,13 +126,11 @@ abstract contract DnsRecordBase is IDnsRecord
 
         require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
         
-        //tvm.accept();
         _whoisInfo.ownerAddress     = newOwnerAddress;
         _whoisInfo.ownerPubkey      = newOwnerPubkey;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";
-        //_whoisInfo.totalOwnersNum  += 1;
     }
 
     function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired

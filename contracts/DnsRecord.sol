@@ -31,11 +31,12 @@ contract DnsRecord is DnsRecordBase
     }
     
     //========================================
+    /// @dev we still need address and pubkey here in constructor, because root level domains are registerd right away;
     //
     constructor(address ownerAddress, uint256 ownerPubkey) public 
     {
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
-        // Be sure that you use a valid "_domainName", otherwise you will loose your Crystyals;
+        // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;
         
         tvm.accept();
         require(_validateDomainName(_domainName), ERROR_DOMAIN_NAME_NOT_VALID);
@@ -53,34 +54,8 @@ contract DnsRecord is DnsRecordBase
     }
 
     //========================================
+    /// @dev dangerous function;
     //
-    function _claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) internal 
-    {
-        // reset ownership first
-        changeOwnership(addressZero, 0);
-
-        // if it is a ROOT domain name
-        if(_whoisInfo.segmentsCount == 1) 
-        {
-            // Root domains won't need approval, internal callback right away
-            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerAddress, newOwnerPubkey);
-        }
-        else if(tonsToInclude > 0)
-        {
-            _sendRegistrationRequest(tonsToInclude);
-        }
-    }
-    
-    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
-    ///      Error: Undeclared identifier. "claimExpired" is not (or not yet) visible at this point.
-    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
-    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) public override Expired 
-    {
-        require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
-
-        _claimExpired(newOwnerAddress, newOwnerPubkey, tonsToInclude);
-    }
-    
     function releaseDomain() external override onlyOwner notExpired
     {
         tvm.accept();
@@ -97,6 +72,35 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
+    function _claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) internal 
+    {
+        // reset ownership first
+        changeOwnership(addressZero, 0);
+
+        // if it is a ROOT domain name
+        if(_whoisInfo.segmentsCount == 1) 
+        {
+            // Root domains won't need approval, internal callback right away
+            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerAddress, newOwnerPubkey);
+        }
+        else if(tonsToInclude > 0) // we won't send anything with 0 TONs included
+        {
+            _sendRegistrationRequest(tonsToInclude);
+        }
+    }
+    
+    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
+    ///      Error: Undeclared identifier. "claimExpired" is not (or not yet) visible at this point.
+    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
+    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) public override Expired 
+    {
+        require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
+
+        _claimExpired(newOwnerAddress, newOwnerPubkey, tonsToInclude);
+    }
+
+    //========================================
+    //
     function _sendRegistrationRequest(uint128 tonsToInclude) internal
     {
         // flag + 1 - means that the sender wants to pay transfer fees separately from contract's balance,
@@ -109,15 +113,11 @@ contract DnsRecord is DnsRecordBase
     function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible override returns (REG_RESULT, address, uint256)
     {
         //========================================
-        // 1. Check if the request exists;
-        //uint256 nameHash = tvm.hash(domainName);
-        //require(!_subdomainRegRequests.exists(nameHash), ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS);
-
-        // 2. Check if it is really my subdomain;
+        // 1. Check if it is really my subdomain;
         (, string parentName) = _parseDomainName(domainName);
         require(parentName == _whoisInfo.domainName, ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN);
 
-        // 3. Check if the request came from domain itself;
+        // 2. Check if the request came from domain itself;
         (address addr, ) = calculateDomainAddress(domainName);
         require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
 
