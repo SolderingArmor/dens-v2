@@ -8,7 +8,6 @@ pragma AbiHeader expire;
 enum REG_TYPE
 {
     FFA,     // Free For All, anyone can register a subdomain;
-    REQUEST, // A request is sent to a parent domain, parent domain owner needs to manually approve or reject a request;
     MONEY,   // Registration is like FFA BUT you need to attach enough money (configurable by parent domain);
     OWNER,   // Only owner can register a subdomain, all other request are denied;
     DENY,    // All requests are denied;
@@ -18,7 +17,6 @@ enum REG_TYPE
 enum REG_RESULT
 {
     NONE,             // 
-    PENDING,          // Either root domain needs to manually approve the registration, or root domain doesn't exist; did you check that?
     APPROVED,         // Cool;
     DENIED,           // Root domain denies the registration (either automatically or manually), try again later;
     NOT_ENOUGH_MONEY, // Root domain requires more money to send;
@@ -46,7 +44,7 @@ struct DnsWhois
     string     comment;             //
     //
     // Statistics
-    uint32     dtCreated;
+    uint32     dtCreated;            //
     uint32     totalOwnersNum;       // Total owners number, increases when expired domain is claimed;
     uint32     subdomainRegAccepted; // Total number of sub-domains registerations accepted;
     uint32     subdomainRegDenied;   // Total number of sub-domains registerations denied;
@@ -60,12 +58,13 @@ interface IDnsRecord
 {
     //========================================
     // Events
-    event newSubdomainRegistrationRequest(uint32 dt, string domainName);
-    event newSubdomainRegistered         (uint32 dt, string domainName, uint128 price);
+    event newSubdomainRegistered(uint32 dt, string domainName, uint128 price);
+    event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress, uint256 ownerPubkey);
+    event domainReleased        (uint32 dt);
 
     //========================================
     // Getters
-    function fetchWhois()  external view responsible returns (DnsWhois  );
+    function callWhois()   external view responsible returns (DnsWhois  );
     function getWhois()                external view returns (DnsWhois  );
     //
     function getDomainName()           external view returns (string    );
@@ -141,57 +140,30 @@ interface IDnsRecord
     ///
     /// @param newOwnerAddress - address of a new owner; can be 0;
     /// @param newOwnerPubkey  - pubkey  of a new owner; can be (0, 0);
+    /// @param tonsToInclude   - TONs to include in message value; TONs need to come with inbound message, it should be enough to pay for domain registration and for all gas fees;
     //
-    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey) external;
+    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) external;
     
-    /// @notice Send a registration request to a parent DomainRecord;
-    ///         Can be called however times needed;
-    ///         If parent registration type is              REG_TYPE.MONEY, parent pays for gas and all extra included TONs (apart from "_whoisInfo.subdomainRegPrice") are considered as a tip and are not returned;
-    ///         If parent registration type is anything but REG_TYPE.MONEY, you need to pay for the gas and parent domain will return the change after processing;
-    ///         In any case, "tonsToInclude" should always be enough to pay for the gas;
-    ///
-    /// @dev You can't spam "sendRegistrationRequest" after domain was registered because domain needs to be pending;
-    ///
-    /// @param tonsToInclude - TONs to include in message value; TONs need to be available on this account when sending;
+    /// @notice Release a domain, owner becomes no one, dtExpires becomes 0;
     //
-    function sendRegistrationRequest(uint128 tonsToInclude) external; 
-    
+    function releaseDomain() external;
+
     /// @notice Receive registration request from a sub-domain;
     ///
     /// @param domainName   - sub-domain name;
     /// @param ownerAddress - address of a new owner;
     /// @param ownerPubkey  - pubkey  of a new owner;
     //
-    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible returns (REG_RESULT);
+    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible returns (REG_RESULT, address, uint256);
     
     /// @notice Callback received from parent domain with registration result;
     ///
     /// @param result - registration result;
     //
-    function callbackOnRegistrationRequest(REG_RESULT result) external;
+    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey) external;
 
     //========================================
     // Sub-domain management
-
-    /// @notice Approve registration of a specific sub-domain;
-    ///
-    /// @param domainName - full domain name;
-    //
-    function approveRegistration(string domainName) external;
-    
-    /// @notice Approve registration of all pending sub-domains;
-    //
-    function approveRegistrationAll() external;
-    
-    /// @notice Deny registration of a specific sub-domain;
-    ///
-    /// @param domainName - full domain name;
-    //
-    function denyRegistration(string domainName) external;
-        
-    /// @notice Deny registration of all pending sub-domains;
-    //
-    function denyRegistrationAll() external;    
 
     /// @notice Change sub-domain registration price;
     ///

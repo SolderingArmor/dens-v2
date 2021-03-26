@@ -14,8 +14,9 @@ abstract contract DnsRecordBase is IDnsRecord
     //========================================
     // Constants
     address constant addressZero = address.makeAddrStd(0, 0); //
-    uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
-    uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
+    uint32  constant fiveMinutes = 60 * 5;                    // 5  minutes in seconds
+    uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days    in seconds
+    uint32  constant ninetyDays  = tenDays * 9;               // 90 days    in seconds
     
     uint32  constant MAX_SEGMENTS_NUMBER   = 4;
     uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
@@ -25,20 +26,21 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     // Error codes
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER     = 100;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT      = 101;
-    uint constant ERROR_EITHER_ADDRESS_OR_PUBKEY           = 102;
-    uint constant ERROR_DOMAIN_NAME_NOT_VALID              = 200;
-    uint constant ERROR_DOMAIN_IS_EXPIRED                  = 201;
-    uint constant ERROR_DOMAIN_IS_NOT_EXPIRED              = 202;
-    uint constant ERROR_DOMAIN_IS_PENDING                  = 203;
-    uint constant ERROR_DOMAIN_IS_NOT_PENDING              = 204;
-    uint constant ERROR_CAN_NOT_PROLONGATE_YET             = 205;
-    uint constant ERROR_WRONG_REGISTRATION_TYPE            = 206;
-    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST  = 207;
-    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS  = 208;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN = 209;
-    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID        = 210;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER      = 100;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT       = 101;
+    uint constant ERROR_EITHER_ADDRESS_OR_PUBKEY            = 102;
+    uint constant ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE = 103;
+    uint constant ERROR_DOMAIN_NAME_NOT_VALID               = 200;
+    uint constant ERROR_DOMAIN_IS_EXPIRED                   = 201;
+    uint constant ERROR_DOMAIN_IS_NOT_EXPIRED               = 202;
+    uint constant ERROR_DOMAIN_IS_PENDING                   = 203;
+    uint constant ERROR_DOMAIN_IS_NOT_PENDING               = 204;
+    uint constant ERROR_CAN_NOT_PROLONGATE_YET              = 205;
+    uint constant ERROR_WRONG_REGISTRATION_TYPE             = 206;
+    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST   = 207;
+    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS   = 208;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN  = 209;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID         = 210;
     
     //========================================
     // Variables
@@ -48,12 +50,8 @@ abstract contract DnsRecordBase is IDnsRecord
     bool     internal        _domainPending = false; // domain is pending when claimExpired() is called;
 
     //========================================
-    // Mappings
-    mapping(uint256 => string) _subdomainRegRequests; // sub-domain registration requests;
-
-    //========================================
     // Getters
-    function fetchWhois()  external view responsible override returns (DnsWhois  ) {    return{value: 0, flag: 64}(_whoisInfo);         }
+    function callWhois()   external view responsible override returns (DnsWhois  ) {    return{value: 0, flag: 64}(_whoisInfo);         }
     function getWhois()                external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
     //
     function getDomainName()           external view override returns (string    ) {    return _whoisInfo.domainName;                   }
@@ -85,7 +83,16 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeEndpointAddress(address newAddress) external override onlyOwner notExpired notPending
+    function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired
+    {
+        tvm.accept();
+
+        dest.transfer(amount, false);
+    }
+    
+    //========================================
+    //
+    function changeEndpointAddress(address newAddress) external override onlyOwner notExpired
     {
         tvm.accept();
         _whoisInfo.endpointAddress = newAddress;
@@ -93,7 +100,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired notPending
+    function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired
     {
         require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);
         
@@ -103,7 +110,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeComment(string newComment) external override onlyOwner notExpired notPending
+    function changeComment(string newComment) external override onlyOwner notExpired
     {
         tvm.accept();
         _whoisInfo.comment = newComment;
@@ -114,23 +121,23 @@ abstract contract DnsRecordBase is IDnsRecord
     /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
     ///      Error: Undeclared identifier. "changeOwnership" is not (or not yet) visible at this point.
     ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
-    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) public override onlyOwner notExpired notPending
+    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) public override onlyOwner notExpired
     {
         bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
         bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
 
         require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
         
-        tvm.accept();
+        //tvm.accept();
         _whoisInfo.ownerAddress     = newOwnerAddress;
         _whoisInfo.ownerPubkey      = newOwnerPubkey;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";
-        _whoisInfo.totalOwnersNum  += 1;
+        //_whoisInfo.totalOwnersNum  += 1;
     }
 
-    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired notPending
+    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
     {
         tvm.accept();
         _whoisInfo.subdomainRegPrice = price;
@@ -138,7 +145,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function prolongate() external override onlyOwner notExpired notPending
+    function prolongate() external override onlyOwner notExpired
     {
         require(canProlongate(), ERROR_CAN_NOT_PROLONGATE_YET);
         
@@ -305,18 +312,11 @@ abstract contract DnsRecordBase is IDnsRecord
         _;
     }
 
-    modifier isPending
+    modifier Expired
     {
-        require(_domainPending, ERROR_DOMAIN_IS_NOT_PENDING);
+        require(isExpired(), ERROR_DOMAIN_IS_NOT_EXPIRED);
         _;
     }
-
-    modifier notPending
-    {
-        require(!_domainPending, ERROR_DOMAIN_IS_PENDING);
-        _;
-    }
-
 }
 
 //================================================================================

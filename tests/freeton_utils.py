@@ -108,14 +108,16 @@ def callFunction(abiPath, contractAddress, functionName, keysFile, functionInput
     wait_params    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=message_result.shard_block_id, send_events=False, abi=abi)
     result         = asyncClient.processing.wait_for_transaction(params=wait_params)
     # possibly interesting fields:
-    result.transaction["compute"]["success"]
-    result.transaction["compute"]["exit_code"]
-    result.transaction["compute"]["gas_used"]
-    result.transaction["action"]["success"]
-    result.transaction["action"]["valid"]
-    result.transaction["action"]["result_code"]
-
-    return result
+    # result.transaction
+    # result.transaction["aborted"]
+    # result.transaction["out_msgs"]
+    # result.transaction["compute"]["success"]
+    # result.transaction["compute"]["exit_code"]
+    # result.transaction["compute"]["gas_used"]
+    # result.transaction["action"]["success"]
+    # result.transaction["action"]["valid"]
+    # result.transaction["action"]["result_code"]    
+    return result 
 
 # ==============================================================================
 #
