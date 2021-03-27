@@ -36,18 +36,18 @@ contract DnsRecord is DnsRecordBase
     constructor(address ownerAddress, uint256 ownerPubkey) public 
     {
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
-        // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;
-        
+        // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;        
         tvm.accept();
+        
         require(_validateDomainName(_domainName), ERROR_DOMAIN_NAME_NOT_VALID);
 
-        (string[] segments, string parentName) = _parseDomainName(_domainName);
-        _whoisInfo.segmentsCount               = uint8(segments.length);
-        _whoisInfo.domainName                  = _domainName;
-        _whoisInfo.parentDomainName            = parentName;
-       (_whoisInfo.parentDomainAddress, )      = calculateDomainAddress(parentName);
-        _whoisInfo.dtCreated                   = now;
-        _whoisInfo.dtExpires                   = 0; // sanity
+       (string[] segments, string parentName) = _parseDomainName(_domainName);
+        _whoisInfo.segmentsCount              = uint8(segments.length);
+        _whoisInfo.domainName                 = _domainName;
+        _whoisInfo.parentDomainName           = parentName;
+       (_whoisInfo.parentDomainAddress, )     = calculateDomainAddress(parentName);
+        _whoisInfo.dtCreated                  = now;
+        _whoisInfo.dtExpires                  = 0; // sanity
         
         // Registering a new domain is the same as claiming the expired from this point:
         _claimExpired(ownerAddress, ownerPubkey, 0);
@@ -74,9 +74,6 @@ contract DnsRecord is DnsRecordBase
     //
     function _claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) internal 
     {
-        // reset ownership first
-        changeOwnership(addressZero, 0);
-
         // if it is a ROOT domain name
         if(_whoisInfo.segmentsCount == 1) 
         {
@@ -95,7 +92,9 @@ contract DnsRecord is DnsRecordBase
     function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) public override Expired 
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
-
+        
+        // reset ownership first
+        changeOwnership(addressZero, 0);        
         _claimExpired(newOwnerAddress, newOwnerPubkey, tonsToInclude);
     }
 

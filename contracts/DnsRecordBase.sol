@@ -116,27 +116,33 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
+    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
+    {
+        tvm.accept();
+        _whoisInfo.subdomainRegPrice = price;
+    }
+
+    //========================================
+    //
     /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
     ///      Error: Undeclared identifier. "changeOwnership" is not (or not yet) visible at this point.
     ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
     function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) public override onlyOwner notExpired
     {
-        bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
-        bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
+        // This check is needed if we don't reset the owner;
+        if(newOwnerAddress != addressZero || newOwnerPubkey != 0)
+        {
+            bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
+            bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
 
-        require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
-        
+            require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
+        }
+
         _whoisInfo.ownerAddress     = newOwnerAddress;
         _whoisInfo.ownerPubkey      = newOwnerPubkey;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";
-    }
-
-    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
-    {
-        tvm.accept();
-        _whoisInfo.subdomainRegPrice = price;
     }
 
     //========================================
