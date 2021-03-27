@@ -105,12 +105,12 @@ contract DnsRecord is DnsRecordBase
     {
         // flag + 1 - means that the sender wants to pay transfer fees separately from contract's balance,
         // because we want to send exactly "tonsToInclude" amount;
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey, msg.sender);
     }
     
     //========================================
     //
-    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible override returns (REG_RESULT, address, uint256)
+    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey, address payerAddress) external responsible override returns (REG_RESULT, address, uint256, address)
     {
         //========================================
         // 1. Check if it is really my subdomain;
@@ -130,7 +130,7 @@ contract DnsRecord is DnsRecordBase
             _whoisInfo.totalFeesCollected   += _whoisInfo.subdomainRegPrice;
             emit newSubdomainRegistered(now, domainName, _whoisInfo.subdomainRegPrice);
             
-            return{value: 0, flag: 0}(REG_RESULT.APPROVED, ownerAddress, ownerPubkey); // we don't return ANY change in this case
+            return{value: 0, flag: 0}(REG_RESULT.APPROVED, ownerAddress, ownerPubkey, payerAddress); // we don't return ANY change in this case
         }
 
         //========================================
@@ -162,7 +162,7 @@ contract DnsRecord is DnsRecordBase
         }
 
         // Return the change
-        return{value: 0, flag: 64}(result, ownerAddress, ownerPubkey);
+        return{value: 0, flag: 64}(result, ownerAddress, ownerPubkey, payerAddress);
     }
     
     //========================================
@@ -190,10 +190,24 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey) external override onlyRoot Expired
+    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey, address payerAddress) external override onlyRoot
     {
         tvm.accept();
-        _callbackOnRegistrationRequest(result, ownerAddress, ownerPubkey);
+
+        // We can't move this to a modifier because if it's there parent domain will get a Bounce message back with all the
+        // TONs that need to be returned to original caller;
+        // 
+        // NOTE: but "onlyRoot" is still a modifier, because if anyone else is sending us a message, we should Bounce it;
+        if(isExpired())
+        {
+            _callbackOnRegistrationRequest(result, ownerAddress, ownerPubkey);
+        }
+
+        // return change to payer if applicable
+        if(msg.value > 0 && payerAddress != addressZero)
+        {
+            payerAddress.transfer(0, true, 64);
+        }
     }
 }
 

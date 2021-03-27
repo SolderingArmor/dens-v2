@@ -154,13 +154,13 @@ interface IDnsRecord
     /// @param ownerAddress - address of a new owner;
     /// @param ownerPubkey  - pubkey  of a new owner;
     //
-    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey) external responsible returns (REG_RESULT, address, uint256);
+    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey, address payerAddress) external responsible returns (REG_RESULT, address, uint256, address);
     
     /// @notice Callback received from parent domain with registration result;
     ///
     /// @param result - registration result;
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey) external;
+    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey, address payerAddress) external;
 
     //========================================
     // Sub-domain management
