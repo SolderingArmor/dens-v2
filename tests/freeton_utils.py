@@ -3,6 +3,7 @@
 # ==============================================================================
 # 
 import asyncio
+import sys
 import os
 import json
 import argparse
@@ -17,12 +18,27 @@ import ast
 
 # ==============================================================================
 # 
+USE_GIVER  = True
+CUSTOM_URL = ""
+
+# Parse arguments and then clear them because UnitTest will @#$~!
+for i, arg in enumerate(sys.argv[1:]):
+    if arg == "--disable-giver":
+        USE_GIVER = False
+    else:
+        CUSTOM_URL = arg
+del sys.argv[1:]
+
+# ==============================================================================
+# 
 client_config = ClientConfig()
 #client_config.network.server_address = "https://main.ton.dev"
-client_config.network.server_address = "http://192.168.0.80"
+if CUSTOM_URL != "":
+    client_config.network.server_address = CUSTOM_URL
 asyncClient   = TonClient(config=client_config)
 ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
 ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
+
 
 # ==============================================================================
 # 
@@ -31,8 +47,9 @@ def getAbi(abiPath):
     return abi
 
 def getTvc(tvcPath):
-    fp       = open(tvcPath, 'rb')
-    tvc      = base64.b64encode(fp.read()).decode()
+    fp  = open(tvcPath, 'rb')
+    tvc = base64.b64encode(fp.read()).decode()
+    fp.close()
     return tvc
 
 def getLocalVariables(abiPath, tvcPath):
@@ -47,12 +64,25 @@ def stringToHex(inputString):
 # ==============================================================================
 #
 def getValuesFromException(tonException):
-    arg       = tonException.args[0]
-    error     = arg[arg.find("(Data:") + 7 : - 1]
-    result    = ast.literal_eval(error)
-    errorCode = result["exit_code"]
-    errorDesc = result["description"]
-    transID   = result["transaction_id"]
+    arg    = tonException.args[0]
+    error  = arg[arg.find("(Data:") + 7 : - 1]
+    result = ast.literal_eval(error)
+
+    try:
+        errorCode = result["exit_code"]
+    except KeyError:
+        errorCode = ""
+
+    try:
+        errorDesc = result["description"]
+    except KeyError:
+        errorDesc = ""
+
+    try:
+        transID = result["transaction_id"]
+    except KeyError:
+        transID = ""
+
     return (errorCode, errorDesc, transID)
 
 
@@ -107,11 +137,11 @@ def getAddressZeroPubkey(abiPath, tvcPath, initialData):
 def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, initialPubkey):
 
     try:
-        (abi, tvc) = getLocalVariables(abiPath, tvcPath)
-        callSet    = CallSet(function_name='constructor', input=constructorInput)
-        deploySet  = DeploySet(tvc=tvc, initial_pubkey=initialPubkey, initial_data=initialData)
-        params     = ParamsOfEncodeMessage(abi=abi, signer=signer, call_set=callSet, deploy_set=deploySet)
-        encoded    = asyncClient.abi.encode_message(params=params)
+        (abi, tvc)    = getLocalVariables(abiPath, tvcPath)
+        callSet       = CallSet(function_name='constructor', input=constructorInput)
+        deploySet     = DeploySet(tvc=tvc, initial_pubkey=initialPubkey, initial_data=initialData)
+        params        = ParamsOfEncodeMessage(abi=abi, signer=signer, call_set=callSet, deploy_set=deploySet)
+        encoded       = asyncClient.abi.encode_message(params=params)
 
         messageParams = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
         messageResult = asyncClient.processing.send_message(params=messageParams)
@@ -127,34 +157,35 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
 
 # ==============================================================================
 #
-def runFunction(abiPath, contractAddress, functionName, functionInputs):
+def runFunction(abiPath, contractAddress, functionName, functionParams):
 
-    paramsQuery = ParamsOfQuery(query='query($acc: String){accounts(filter:{id:{eq:$acc}}){boc}}', variables={'acc': contractAddress})
-    result = asyncClient.net.query(params=paramsQuery)
-    boc = result.result["data"]["accounts"][0]["boc"]
+    paramsQuery  = ParamsOfQuery(query='query($acc: String){accounts(filter:{id:{eq:$acc}}){boc}}', variables={'acc': contractAddress})
+    result       = asyncClient.net.query(params=paramsQuery)
+    boc          = result.result["data"]["accounts"][0]["boc"]
     
-    abi        = getAbi(abiPath)
-    callSet    = CallSet(function_name=functionName, input=functionInputs)
-    params     = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=Signer.NoSigner(), call_set=callSet)
-    encoded    = asyncClient.abi.encode_message(params=params)
-    paramsRun  = ParamsOfRunTvm(message=encoded.message, account=boc, abi=abi)
-    result     = asyncClient.tvm.run_tvm(params=paramsRun)
+    abi          = getAbi(abiPath)
+    callSet      = CallSet(function_name=functionName, input=functionParams)
+    params       = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=Signer.NoSigner(), call_set=callSet)
+    encoded      = asyncClient.abi.encode_message(params=params)
 
-    paramsDcd  = ParamsOfDecodeMessage(abi=abi, message=result.out_messages[0])
-    decoded    = asyncClient.abi.decode_message(params=paramsDcd)
+    paramsRun    = ParamsOfRunTvm(message=encoded.message, account=boc, abi=abi)
+    result       = asyncClient.tvm.run_tvm(params=paramsRun)
+
+    paramsDecode = ParamsOfDecodeMessage(abi=abi, message=result.out_messages[0])
+    decoded      = asyncClient.abi.decode_message(params=paramsDecode)
 
     result = decoded.value["value0"]
     return result
 
 # ==============================================================================
 #
-def callFunction(abiPath, contractAddress, functionName, signer, functionInputs):
+def callFunction(abiPath, contractAddress, functionName, functionParams, signer):
 
     try:
-        abi        = getAbi(abiPath)
-        callSet    = CallSet(function_name=functionName, input=functionInputs)
-        params     = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=signer, call_set=callSet)
-        encoded    = asyncClient.abi.encode_message(params=params)
+        abi            = getAbi(abiPath)
+        callSet        = CallSet(function_name=functionName, input=functionParams)
+        params         = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=signer, call_set=callSet)
+        encoded        = asyncClient.abi.encode_message(params=params)
 
         message_params = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
         message_result = asyncClient.processing.send_message(params=message_params)
@@ -180,9 +211,13 @@ def callFunction(abiPath, contractAddress, functionName, signer, functionInputs)
 # ==============================================================================
 #
 def giverGive(contractAddress, amountTons):
+    
+    if not USE_GIVER:
+        return
+    
     giverAddress = "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
     signer = getSigner("")
-    callFunction("local_giver.abi.json", giverAddress, "sendGrams", signer, {"dest":contractAddress,"amount":amountTons})
+    callFunction("local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, signer)
 
 # ==============================================================================
 #
