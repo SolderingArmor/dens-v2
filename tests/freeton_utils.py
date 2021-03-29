@@ -18,27 +18,24 @@ import ast
 
 # ==============================================================================
 # 
-USE_GIVER  = True
-CUSTOM_URL = ""
-
-# Parse arguments and then clear them because UnitTest will @#$~!
-for i, arg in enumerate(sys.argv[1:]):
-    if arg == "--disable-giver":
-        USE_GIVER = False
-    else:
-        CUSTOM_URL = arg
-del sys.argv[1:]
+clientConfig  = ClientConfig()
+clientConfig.network.server_address = "https://net.ton.dev"
+asyncClient   = TonClient(config=clientConfig)
+ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
+ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
+USE_GIVER     = True
 
 # ==============================================================================
 # 
-client_config = ClientConfig()
-#client_config.network.server_address = "https://main.ton.dev"
-if CUSTOM_URL != "":
-    client_config.network.server_address = CUSTOM_URL
-asyncClient   = TonClient(config=client_config)
-ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
-ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
+def changeConfig(httpAddress, useGiver):
 
+    global asyncClient
+    global USE_GIVER
+    if httpAddress != "":
+        config      = ClientConfig()
+        config.network.server_address = httpAddress
+        asyncClient = TonClient(config=config)
+    USE_GIVER   = useGiver
 
 # ==============================================================================
 # 
@@ -96,11 +93,16 @@ def getCodeFromTvc(tvcPath):
 
 # ==============================================================================
 #
-def getSigner(keysFile):
+def loadSigner(keysFile):
     if keysFile == "":
         signer = Signer.External(ZERO_PUBKEY)
     else:
         signer = Signer.Keys(KeyPair.load(keysFile, False))
+    return signer
+
+def generateSigner():
+    keypair = asyncClient.crypto.generate_random_sign_keys()
+    signer  = Signer.Keys(keys=keypair)
     return signer
 
 # ==============================================================================
@@ -182,16 +184,16 @@ def runFunction(abiPath, contractAddress, functionName, functionParams):
 def callFunction(abiPath, contractAddress, functionName, functionParams, signer):
 
     try:
-        abi            = getAbi(abiPath)
-        callSet        = CallSet(function_name=functionName, input=functionParams)
-        params         = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=signer, call_set=callSet)
-        encoded        = asyncClient.abi.encode_message(params=params)
+        abi           = getAbi(abiPath)
+        callSet       = CallSet(function_name=functionName, input=functionParams)
+        params        = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=signer, call_set=callSet)
+        encoded       = asyncClient.abi.encode_message(params=params)
 
-        message_params = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
-        message_result = asyncClient.processing.send_message(params=message_params)
+        messageParams = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
+        messageResult = asyncClient.processing.send_message(params=messageParams)
 
-        wait_params    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=message_result.shard_block_id, send_events=False, abi=abi)
-        result         = asyncClient.processing.wait_for_transaction(params=wait_params)
+        waitParams    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=messageResult.shard_block_id, send_events=False, abi=abi)
+        result        = asyncClient.processing.wait_for_transaction(params=waitParams)
         # possibly interesting fields:
         # result.transaction
         # result.transaction["aborted"]
@@ -216,8 +218,7 @@ def giverGive(contractAddress, amountTons):
         return
     
     giverAddress = "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
-    signer = getSigner("")
-    callFunction("local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, signer)
+    callFunction("local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
 
 # ==============================================================================
 #
