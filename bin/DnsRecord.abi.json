@@ -61,21 +61,6 @@
 			]
 		},
 		{
-			"name": "TEST_changeDtExpires",
-			"inputs": [
-				{"name":"newDate","type":"uint32"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "TEST_selfdestruct",
-			"inputs": [
-			],
-			"outputs": [
-			]
-		},
-		{
 			"name": "callWhois",
 			"inputs": [
 				{"name":"_answer_id","type":"uint32"}

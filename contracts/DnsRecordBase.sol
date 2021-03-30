@@ -60,8 +60,7 @@ abstract contract DnsRecordBase is IDnsRecord
     function getParentDomainName()     external view override returns (string    ) {    return _whoisInfo.parentDomainName;             }
     function getParentDomainAddress()  external view override returns (address   ) {    return _whoisInfo.parentDomainAddress;          }    
     //
-    function getOwnerAddress()         external view override returns (address   ) {    return _whoisInfo.ownerAddress;                 }
-    function getOwnerPubkey()          external view override returns (uint256   ) {    return _whoisInfo.ownerPubkey;                  }
+    function getOwnerID()              external view override returns (uint256   ) {    return _whoisInfo.ownerID;                      }
     function getDtLastProlongation()   external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
     function getDtExpires()            external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
     function getSubdomainRegPrice()    external view override returns (uint128   ) {    return _whoisInfo.subdomainRegPrice;            }
@@ -127,19 +126,9 @@ abstract contract DnsRecordBase is IDnsRecord
     /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
     ///      Error: Undeclared identifier. "changeOwnership" is not (or not yet) visible at this point.
     ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
-    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) public override onlyOwner notExpired
+    function changeOwnership(uint256 newOwnerID) public override onlyOwner notExpired
     {
-        // This check is needed if we don't reset the owner;
-        if(newOwnerAddress != addressZero || newOwnerPubkey != 0)
-        {
-            bool byPubKey  = (newOwnerPubkey != 0 && newOwnerAddress == addressZero);
-            bool byAddress = (newOwnerPubkey == 0 && newOwnerAddress != addressZero);
-
-            require(byPubKey || byAddress, ERROR_EITHER_ADDRESS_OR_PUBKEY);
-        }
-
-        _whoisInfo.ownerAddress     = newOwnerAddress;
-        _whoisInfo.ownerPubkey      = newOwnerPubkey;
+        _whoisInfo.ownerID          = newOwnerID;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";
@@ -295,8 +284,8 @@ abstract contract DnsRecordBase is IDnsRecord
     modifier onlyOwner
     {
         // Owner can make changes only after registration process is completed;
-        bool byPubKey  = (_whoisInfo.ownerPubkey == msg.pubkey() && _whoisInfo.ownerAddress == addressZero);
-        bool byAddress = (_whoisInfo.ownerPubkey == 0            && _whoisInfo.ownerAddress == msg.sender );
+        bool byPubKey  = (_whoisInfo.ownerID == msg.pubkey()    );
+        bool byAddress = (_whoisInfo.ownerID == msg.sender.value);
 
         require(byPubKey || byAddress, ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER);
         _;

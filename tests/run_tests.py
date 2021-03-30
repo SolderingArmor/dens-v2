@@ -46,8 +46,8 @@ def createDomainDictionary(name):
 
 # ==============================================================================
 # 
-def deployDomain(domainDict, ownerAddress, ownerPubkey, signer):
-    result = deployContract(abiPath=domainDict["ABI"], tvcPath=domainDict["TVC"], constructorInput={"ownerAddress":ownerAddress,"ownerPubkey":ownerPubkey}, initialData=domainDict["INIT"], signer=signer, initialPubkey=ZERO_PUBKEY)
+def deployDomain(domainDict, ownerID, signer):
+    result = deployContract(abiPath=domainDict["ABI"], tvcPath=domainDict["TVC"], constructorInput={"ownerID":ownerID}, initialData=domainDict["INIT"], signer=signer, initialPubkey=ZERO_PUBKEY)
     return result
 
 def callDomainFunction(domainDict, functionName, functionParams, signer):
@@ -75,12 +75,12 @@ class Test_SameNameDeploy(unittest.TestCase):
 
     # 2. Deploy "org"
     def test_2(self):
-        result = deployDomain(self.domain, "", ZERO_PUBKEY, self.signer)
+        result = deployDomain(self.domain, 0, self.signer)
         self.assertEqual(result[1], 0)
 
     # 2. Deploy "org" once again
     def test_3(self):
-        result = deployDomain(self.domain, "", ZERO_PUBKEY, self.signer)
+        result = deployDomain(self.domain, 0, self.signer)
         self.assertEqual(result[1], 51)
 
     # 2. Cleanup

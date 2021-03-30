@@ -34,8 +34,7 @@ struct DnsWhois
     string     parentDomainName;    //
     address    parentDomainAddress; //
     //
-    address    ownerAddress;        //
-    uint256    ownerPubkey;         //
+    uint256    ownerID;             //
     uint32     dtLastProlongation;  //
     uint32     dtExpires;           //
     uint128    subdomainRegPrice;   // 
@@ -58,8 +57,8 @@ interface IDnsRecord
 {
     //========================================
     // Events
-    event newSubdomainRegistered(uint32 dt, string domainName, uint128 price);
-    event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress, uint256 ownerPubkey);
+    event newSubdomainRegistered(uint32 dt, string domainName, uint128 price  );
+    event registrationResult    (uint32 dt, REG_RESULT result, uint256 ownerID);
     event domainReleased        (uint32 dt);
 
     //========================================
@@ -75,8 +74,7 @@ interface IDnsRecord
     function getParentDomainName()     external view returns (string    );
     function getParentDomainAddress()  external view returns (address   );    
     //
-    function getOwnerAddress()         external view returns (address   );
-    function getOwnerPubkey()          external view returns (uint256   );
+    function getOwnerID()              external view returns (uint256   );
     function getDtLastProlongation()   external view returns (uint32    );
     function getDtExpires()            external view returns (uint32    );
     function getSubdomainRegPrice()    external view returns (uint128   );
@@ -109,12 +107,11 @@ interface IDnsRecord
     /// @notice Change the owner;
     ///         Resets some DNS values like endpointAddress and comment;
     ///
-    /// @param newOwnerAddress - address of a new owner; can be 0;
-    /// @param newOwnerPubkey  - pubkey  of a new owner; can be (0, 0);
+    /// @param newOwnerID  - address or pubkey  of a new owner; can be (0, 0);
     ///
     /// @dev If you set both newOwnerAddress and newOwnerPubkey to 0, you will loose ownership of the domain!
     //
-    function changeOwnership(address newOwnerAddress, uint256 newOwnerPubkey) external;
+    function changeOwnership(uint256 newOwnerID) external;
     
     /// @notice Change sub-domain registration type;
     ///
@@ -138,11 +135,10 @@ interface IDnsRecord
     
     /// @notice Claim an expired DeNS Record; claiming is the same as registering new domain, except you don't deploy;
     ///
-    /// @param newOwnerAddress - address of a new owner; can be 0;
-    /// @param newOwnerPubkey  - pubkey  of a new owner; can be (0, 0);
-    /// @param tonsToInclude   - TONs to include in message value; TONs need to come with inbound message, it should be enough to pay for domain registration and for all gas fees;
+    /// @param newOwnerID    - address or pubkey  of a new owner; can be (0, 0);
+    /// @param tonsToInclude - TONs to include in message value; TONs need to come with inbound message, it should be enough to pay for domain registration and for all gas fees;
     //
-    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) external;
+    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) external;
     
     /// @notice Release a domain, owner becomes no one, dtExpires becomes 0;
     //
@@ -150,17 +146,16 @@ interface IDnsRecord
 
     /// @notice Receive registration request from a sub-domain;
     ///
-    /// @param domainName   - sub-domain name;
-    /// @param ownerAddress - address of a new owner;
-    /// @param ownerPubkey  - pubkey  of a new owner;
+    /// @param domainName - sub-domain name;
+    /// @param ownerID    - address or pubkey  of a new owner;
     //
-    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey, address payerAddress) external responsible returns (REG_RESULT, address, uint256, address);
+    function receiveRegistrationRequest(string domainName, uint256 ownerID, address payerAddress) external responsible returns (REG_RESULT, uint256, address);
     
     /// @notice Callback received from parent domain with registration result;
     ///
     /// @param result - registration result;
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey, address payerAddress) external;
+    function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external;
 
     //========================================
     // Sub-domain management

@@ -33,7 +33,7 @@ contract DnsRecord is DnsRecordBase
     //========================================
     /// @dev we still need address and pubkey here in constructor, because root level domains are registerd right away;
     //
-    constructor(address ownerAddress, uint256 ownerPubkey) public 
+    constructor(uint256 ownerID) public 
     {
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
         // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;        
@@ -50,7 +50,7 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.dtExpires                  = 0; // sanity
         
         // Registering a new domain is the same as claiming the expired from this point:
-        _claimExpired(ownerAddress, ownerPubkey, 0);
+        _claimExpired(ownerID, 0);
     }
 
     //========================================
@@ -60,8 +60,7 @@ contract DnsRecord is DnsRecordBase
     {
         tvm.accept();
 
-        _whoisInfo.ownerAddress     = addressZero;
-        _whoisInfo.ownerPubkey      = 0;
+        _whoisInfo.ownerID          = 0;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY;
         _whoisInfo.comment          = "";
@@ -72,13 +71,13 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function _claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) internal 
+    function _claimExpired(uint256 newOwnerID, uint128 tonsToInclude) internal 
     {
         // if it is a ROOT domain name
         if(_whoisInfo.segmentsCount == 1) 
         {
             // Root domains won't need approval, internal callback right away
-            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerAddress, newOwnerPubkey);
+            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerID);
         }
         else if(tonsToInclude > 0) // we won't send anything with 0 TONs included
         {
@@ -89,27 +88,27 @@ contract DnsRecord is DnsRecordBase
     /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
     ///      Error: Undeclared identifier. "claimExpired" is not (or not yet) visible at this point.
     ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
-    function claimExpired(address newOwnerAddress, uint256 newOwnerPubkey, uint128 tonsToInclude) public override Expired 
+    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired 
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
         
         // reset ownership first
-        changeOwnership(addressZero, 0);        
-        _claimExpired(newOwnerAddress, newOwnerPubkey, tonsToInclude);
+        changeOwnership(0);        
+        _claimExpired(newOwnerID, tonsToInclude);
     }
 
     //========================================
     //
-    function _sendRegistrationRequest(uint128 tonsToInclude) internal
+    function _sendRegistrationRequest(uint128 tonsToInclude) internal view
     {
         // flag + 1 - means that the sender wants to pay transfer fees separately from contract's balance,
         // because we want to send exactly "tonsToInclude" amount;
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, _whoisInfo.ownerAddress, _whoisInfo.ownerPubkey, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, _whoisInfo.ownerID, msg.sender);
     }
     
     //========================================
     //
-    function receiveRegistrationRequest(string domainName, address ownerAddress, uint256 ownerPubkey, address payerAddress) external responsible override returns (REG_RESULT, address, uint256, address)
+    function receiveRegistrationRequest(string domainName, uint256 ownerID, address payerAddress) external responsible override returns (REG_RESULT, uint256, address)
     {
         //========================================
         // 1. Check if it is really my subdomain;
@@ -129,7 +128,7 @@ contract DnsRecord is DnsRecordBase
             _whoisInfo.totalFeesCollected   += _whoisInfo.subdomainRegPrice;
             emit newSubdomainRegistered(now, domainName, _whoisInfo.subdomainRegPrice);
             
-            return{value: 0, flag: 0}(REG_RESULT.APPROVED, ownerAddress, ownerPubkey, payerAddress); // we don't return ANY change in this case
+            return{value: 0, flag: 0}(REG_RESULT.APPROVED, ownerID, payerAddress); // we don't return ANY change in this case
         }
 
         //========================================
@@ -144,8 +143,8 @@ contract DnsRecord is DnsRecordBase
         }
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
-            bool ownerCalled = (ownerAddress == _whoisInfo.ownerAddress && ownerPubkey == _whoisInfo.ownerPubkey);
-            result = ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED;
+            bool ownerCalled = (ownerID == _whoisInfo.ownerID);
+            result = (ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED);
         }
 
         // Statistics
@@ -161,35 +160,33 @@ contract DnsRecord is DnsRecordBase
         }
 
         // Return the change
-        return{value: 0, flag: 64}(result, ownerAddress, ownerPubkey, payerAddress);
+        return{value: 0, flag: 64}(result, ownerID, payerAddress);
     }
     
     //========================================
     //
-    function _callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey) internal
+    function _callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID) internal
     {
-        emit registrationResult(now, result, ownerAddress, ownerPubkey);
+        emit registrationResult(now, result, ownerID);
         _whoisInfo.lastRegResult = result;
         
         if(result == REG_RESULT.APPROVED)
         {
-            _whoisInfo.ownerAddress    = ownerAddress;
-            _whoisInfo.ownerPubkey     = ownerPubkey;
+            _whoisInfo.ownerID         = ownerID;
             _whoisInfo.dtExpires       = (now + ninetyDays);
             _whoisInfo.totalOwnersNum += 1;
         }
         else if(result == REG_RESULT.DENIED || result == REG_RESULT.NOT_ENOUGH_MONEY)
         {
             // Domain ownership is reset
-            _whoisInfo.ownerAddress = addressZero;
-            _whoisInfo.ownerPubkey  = 0;
-            _whoisInfo.dtExpires    = 0;
+            _whoisInfo.ownerID   = 0;
+            _whoisInfo.dtExpires = 0;
         }
     }
 
     //========================================
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, uint256 ownerPubkey, address payerAddress) external override onlyRoot
+    function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external override onlyRoot
     {
         tvm.accept();
 
@@ -199,7 +196,7 @@ contract DnsRecord is DnsRecordBase
         // NOTE: but "onlyRoot" is still a modifier, because if anyone else is sending us a message, we should Bounce it;
         if(isExpired())
         {
-            _callbackOnRegistrationRequest(result, ownerAddress, ownerPubkey);
+            _callbackOnRegistrationRequest(result, ownerID);
         }
 
         // return change to payer if applicable
