@@ -284,8 +284,8 @@ abstract contract DnsRecordBase is IDnsRecord
     modifier onlyOwner
     {
         // Owner can make changes only after registration process is completed;
-        bool byPubKey  = (_whoisInfo.ownerID == msg.pubkey()    );
-        bool byAddress = (_whoisInfo.ownerID == msg.sender.value);
+        bool byPubKey  = (_whoisInfo.ownerID == msg.pubkey()     && msg.pubkey() != 0          );
+        bool byAddress = (_whoisInfo.ownerID == msg.sender.value && msg.sender   != addressZero);
 
         require(byPubKey || byAddress, ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER);
         _;

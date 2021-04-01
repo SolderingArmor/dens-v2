@@ -167,7 +167,7 @@ class Test_2_DeployWithMultisigOwner(unittest.TestCase):
         
     # 3. Deploy "net"
     def test_3(self):
-        result = deployDomain(self.domain, 0, self.signerD)
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerD)
         self.assertEqual(result[1], 0)
 
     # 4. Call change endpoint from multisig
