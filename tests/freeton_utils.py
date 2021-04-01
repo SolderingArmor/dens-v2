@@ -24,18 +24,21 @@ asyncClient   = TonClient(config=clientConfig)
 ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
 ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
 USE_GIVER     = True
+THROW         = False
 
 # ==============================================================================
 # 
-def changeConfig(httpAddress, useGiver):
+def changeConfig(httpAddress, useGiver, throw):
 
     global asyncClient
     global USE_GIVER
+    global THROW
     if httpAddress != "":
         config      = ClientConfig()
         config.network.server_address = httpAddress
         asyncClient = TonClient(config=config)
-    USE_GIVER   = useGiver
+    USE_GIVER = useGiver
+    THROW     = throw
 
 # ==============================================================================
 # 
@@ -154,6 +157,8 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
         return (result, 0, "", "")
 
     except TonException as ton:
+        if THROW:
+            raise ton
         (errorCode, errorDesc, transID) = getValuesFromException(ton)
         return ({}, errorCode, errorDesc, transID)
 
@@ -207,6 +212,8 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
         return (result, 0, "", "")
 
     except TonException as ton:
+        if THROW:
+            raise ton
         (errorCode, errorDesc, transID) = getValuesFromException(ton)
         return ({}, errorCode, errorDesc, transID)
 
