@@ -129,17 +129,17 @@ class Test_1_SameNameDeploy(unittest.TestCase):
 
     # 2. Deploy "org"
     def test_2(self):
-        result = deployDomain(self.domain, 0, self.signer)
+        result = deployDomain(domainDict=self.domain, ownerID=0, signer=self.signer)
         self.assertEqual(result[1], 0)
 
     # 3. Deploy "org" once again
     def test_3(self):
-        result = deployDomain(self.domain, 0, self.signer)
+        result = deployDomain(domainDict=self.domain, ownerID=0, signer=self.signer)
         self.assertEqual(result[1], 51)
 
     # 4. Cleanup
     def test_4(self):
-        result = callDomainFunction(self.domain, "TEST_selfdestruct", {}, self.signer)
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signer)
         self.assertEqual(result[1], 0)
 
 # ==============================================================================
@@ -176,12 +176,12 @@ class Test_2_DeployWithMultisigOwner(unittest.TestCase):
         result   = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpoint}, value=100000000, flags=1, signer=self.signerM)
         self.assertEqual(result[1], 0)
 
-        result   = runDomainFunction(self.domain, "getEndpointAddress", {})
+        result   = runDomainFunction(domainDict=self.domain, functionName="getEndpointAddress", functionParams={})
         self.assertEqual(result, endpoint)
 
     # 5. Cleanup
     def test_5(self):
-        result = callDomainFunction(self.domain, "TEST_selfdestruct", {}, self.signerD)
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
 
 
