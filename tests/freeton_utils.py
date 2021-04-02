@@ -174,7 +174,7 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
 #
 def runFunction(abiPath, contractAddress, functionName, functionParams):
 
-    paramsQuery  = ParamsOfQuery(query='query($acc: String){accounts(filter:{id:{eq:$acc}}){boc}}', variables={'acc': contractAddress})
+    paramsQuery  = ParamsOfQuery(query="query($acc: String){accounts(filter:{id:{eq:$acc}}){boc}}", variables={"acc": contractAddress})
     result       = asyncClient.net.query(params=paramsQuery)
     boc          = result.result["data"]["accounts"][0]["boc"]
     
@@ -224,6 +224,18 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
             raise ton
         (errorCode, errorDesc, transID) = getValuesFromException(ton)
         return ({}, errorCode, errorDesc, transID)
+
+# ==============================================================================
+#
+def getTransactionGraphQL(messageID):
+    paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){aborted,compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}}}", variables={"msg": messageID})
+    result      = asyncClient.net.query(params=paramsQuery)
+    return result
+
+def getExitCodeFromMessageID(messageID):
+    result       = getTransactionGraphQL(messageID)
+    realExitCode = result.result["data"]["transactions"][0]["compute"]["exit_code"]
+    return realExitCode
 
 # ==============================================================================
 #

@@ -4,6 +4,7 @@
 # 
 from freeton_utils import *
 import unittest
+import time
 import sys
 
 TON = 1000000000
@@ -259,27 +260,28 @@ class Test_4_Prolongate(unittest.TestCase):
 
     # 4. Try prolongate
     def test_4(self):
-        dtExpiresOld = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
-
         result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="prolongate", functionParams={}, value=100000000, flags=1, signer=self.signerM)
         self.assertEqual(result[1], 0) 
-        # ERROR_CAN_NOT_PROLONGATE_YET is a result in internal message, can't see it here 
-        # but can see here (it is MESSAGE ID with internal transaction):
-        # result[0].transaction["out_msgs"][0]
 
-        dtExpiresNew = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
-        self.assertEqual(dtExpiresOld, dtExpiresNew)
+        # ERROR_CAN_NOT_PROLONGATE_YET is a result in internal message, can't see it here 
+        # but can see in outgoing internal message result (it is MESSAGE ID with internal transaction): result[0].transaction["out_msgs"][0]
+        # 
+        internalMsgID = result[0].transaction["out_msgs"][0]
+        realExitCode  = getExitCodeFromMessageID(internalMsgID)
+        self.assertEqual(realExitCode, 205) # ERROR_CAN_NOT_PROLONGATE_YET
 
         # HACK expiration date
         result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="TEST_changeDtExpires", functionParams={"newDate":getNowTimestamp() + 60*60*24}, value=100000000, flags=1, signer=self.signerM)
         self.assertEqual(result[1], 0)
 
+        # Try to prolongate again
         result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="prolongate", functionParams={}, value=100000000, flags=1, signer=self.signerM)
         self.assertEqual(result[1], 0)
 
         # Check again
-        dtExpiresNew = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
-        self.assertGreater(dtExpiresNew, dtExpiresOld)
+        internalMsgID = result[0].transaction["out_msgs"][0]
+        realExitCode  = getExitCodeFromMessageID(internalMsgID)
+        self.assertEqual(realExitCode, 0)
 
     # 5. Cleanup
     def test_5(self):
