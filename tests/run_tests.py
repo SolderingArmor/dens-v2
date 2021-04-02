@@ -116,8 +116,8 @@ def callDomainFunctionFromMultisig(domainDict, msigDict, functionName, functionP
 # 
 class Test_1_SameNameDeploy(unittest.TestCase):
 
-    domain = createDomainDictionary("org")
     signer = generateSigner()
+    domain = createDomainDictionary("org")
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -184,11 +184,112 @@ class Test_2_DeployWithMultisigOwner(unittest.TestCase):
         result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
 
+# ==============================================================================
+#
+class Test_3_WrongNames(unittest.TestCase):
+    
+    signer  = generateSigner()
+    
+    # THIS GIVES OUT OF GAS!!!
+    # {"CODE": 0  , "DOMAIN": createDomainDictionary("longest00000fine000domain000name000with63letters000times000four/perfectly000fine000domain000name000with63letters000inside000kek/perfectly000fine000domain000name000with63letters000inside000kek/perfectly000fine000domain000name000with63letters000inside000kek")},
+    # CODE is expected answer code when deploying;
+    # 200 = ERROR_DOMAIN_NAME_NOT_VALID
+    domainDictList = [
+        {"CODE": 200, "DOMAIN": createDomainDictionary("org-org")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("ORG")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("F@!#ING")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("ddd//dd")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("//")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("under_score")},
+        {"CODE": 0,   "DOMAIN": createDomainDictionary("perfectly000fine000domain000name000with63letters000inside000kek")},
+        {"CODE": 0,   "DOMAIN": createDomainDictionary("one/two/three/four")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("one/two/three/four/five")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("too000long000domain000name000with64letters000inside000kekekelolz")},
+    ]
 
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        for rec in self.domainDictList:
+            giverGive(rec["DOMAIN"]["ADDR"], TON * 2)
+        
+    # 2. Deploys
+    def test_2(self):
+        for rec in self.domainDictList:
+            result = deployDomain(rec["DOMAIN"], 0, self.signer)
+            self.assertEqual(result[1], rec["CODE"])
+
+    # 3. Cleanup
+    def test_3(self):
+        for rec in self.domainDictList:
+            result = callDomainFunction(domainDict=rec["DOMAIN"], functionName="TEST_selfdestruct", functionParams={}, signer=self.signer)
+            self.assertEqual(result[1], 0)
+
+# ==============================================================================
+#
+class Test_4_Prolongate(unittest.TestCase):
+    
+    signerD = generateSigner()
+    signerM = generateSigner()
+    domain  = createDomainDictionary("net")
+    msig    = createMultisigDictionary(signerM.keys.public)
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain["ADDR"], TON * 2)
+        giverGive(self.msig  ["ADDR"], TON * 20)
+
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig, self.signerM)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. Try prolongate
+    def test_4(self):
+        dtExpiresOld = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
+
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="prolongate", functionParams={}, value=100000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0) 
+        # ERROR_CAN_NOT_PROLONGATE_YET is a result in internal message, can't see it here 
+        # but can see here (it is MESSAGE ID with internal transaction):
+        # result[0].transaction["out_msgs"][0]
+
+        dtExpiresNew = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
+        self.assertEqual(dtExpiresOld, dtExpiresNew)
+
+        # HACK expiration date
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="TEST_changeDtExpires", functionParams={"newDate":getNowTimestamp() + 60*60*24}, value=100000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="prolongate", functionParams={}, value=100000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+
+        # Check again
+        dtExpiresNew = runDomainFunction(domainDict=self.domain, functionName="getDtExpires", functionParams={})
+        self.assertGreater(dtExpiresNew, dtExpiresOld)
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+
+    
 # ==============================================================================
 # 
 unittest.main()
-exit()
 
 # ==============================================================================
 # Decode custom BOC using ABI 
@@ -199,3 +300,6 @@ exit()
 
 #print(result.body_type, result.value, result.name, result.header)
 #exit()
+
+# ==============================================================================
+#

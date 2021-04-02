@@ -230,6 +230,8 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
 def giverGive(contractAddress, amountTons):
     
     if not USE_GIVER:
+        print("\nNow GIVER expects to give {} TONs to address {};".format(amountTons, contractAddress))
+        input("Please, do it manually and then press ENTER to continue...")
         return
     
     giverAddress = "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
