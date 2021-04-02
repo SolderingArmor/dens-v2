@@ -82,56 +82,75 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired
     {
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
 
         dest.transfer(amount, false);
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
     
     //========================================
     //
     function changeEndpointAddress(address newAddress) external override onlyOwner notExpired
     {
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
         _whoisInfo.endpointAddress = newAddress;
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
     //
     function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired
     {
-        require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);
-        
-        tvm.accept();
+        require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);        
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
         _whoisInfo.registrationType = newType;
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
     //
     function changeComment(string newComment) external override onlyOwner notExpired
     {
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
         _whoisInfo.comment = newComment;
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
     //
     function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
     {
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
         _whoisInfo.subdomainRegPrice = price;
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
     //
-    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
-    ///      Error: Undeclared identifier. "changeOwnership" is not (or not yet) visible at this point.
-    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
-    function changeOwnership(uint256 newOwnerID) public override onlyOwner notExpired
+    function _changeOwnership(uint256 newOwnerID) internal
     {
         _whoisInfo.ownerID          = newOwnerID;
         _whoisInfo.endpointAddress  = addressZero;
         _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";
+    }
+
+    function changeOwnership(uint256 newOwnerID) external override onlyOwner notExpired
+    {
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
+        _changeOwnership(newOwnerID);
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
@@ -140,8 +159,11 @@ abstract contract DnsRecordBase is IDnsRecord
     {
         require(canProlongate(), ERROR_CAN_NOT_PROLONGATE_YET);
         
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
+
         _whoisInfo.dtExpires += ninetyDays;
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================

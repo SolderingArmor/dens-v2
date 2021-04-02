@@ -13,9 +13,6 @@ contract DnsRecord is DnsRecordBase
 {
     //========================================
     //
-    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
-    ///      Error: Undeclared identifier. "calculateFutureAddress" is not (or not yet) visible at this point.
-    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
     function calculateDomainAddress(string domainName) public view override returns (address, TvmCell)
     {
         TvmCell stateInit = tvm.buildStateInit({
@@ -31,6 +28,7 @@ contract DnsRecord is DnsRecordBase
     }
     
     //========================================
+    //
     /// @dev we still need address and pubkey here in constructor, because root level domains are registerd right away;
     //
     constructor(uint256 ownerID) public 
@@ -54,11 +52,12 @@ contract DnsRecord is DnsRecordBase
     }
 
     //========================================
+    //
     /// @dev dangerous function;
     //
     function releaseDomain() external override onlyOwner notExpired
     {
-        tvm.accept();
+        if(msg.pubkey() != 0) { tvm.accept(); }
 
         _whoisInfo.ownerID          = 0;
         _whoisInfo.endpointAddress  = addressZero;
@@ -67,6 +66,8 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.dtExpires        = 0;
 
         emit domainReleased(now);
+
+        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }
 
     //========================================
@@ -85,15 +86,12 @@ contract DnsRecord is DnsRecordBase
         }
     }
     
-    /// @dev TODO: here "external" was purposely changed to "public", otherwise you get the following error:
-    ///      Error: Undeclared identifier. "claimExpired" is not (or not yet) visible at this point.
-    ///      The fix is coming: https://github.com/tonlabs/TON-Solidity-Compiler/issues/36
     function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired 
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
         
         // reset ownership first
-        changeOwnership(0);        
+        _changeOwnership(0);        
         _claimExpired(newOwnerID, tonsToInclude);
     }
 
