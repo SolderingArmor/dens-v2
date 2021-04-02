@@ -36,8 +36,9 @@ contract DnsRecord is DnsRecordBase
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
         // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;        
         tvm.accept();
-        
-        require(_validateDomainName(_domainName), ERROR_DOMAIN_NAME_NOT_VALID);
+
+        _nameIsValid = _validateDomainName(_domainName);
+        require(_nameIsValid, ERROR_DOMAIN_NAME_NOT_VALID);
 
        (string[] segments, string parentName) = _parseDomainName(_domainName);
         _whoisInfo.segmentsCount              = uint8(segments.length);
@@ -86,7 +87,7 @@ contract DnsRecord is DnsRecordBase
         }
     }
     
-    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired 
+    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired NameIsValid
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
         

@@ -15,6 +15,7 @@ from tonclient.types  import *
 from binascii import unhexlify
 import pathlib
 import ast
+from datetime import datetime
 
 # ==============================================================================
 # 
@@ -60,6 +61,13 @@ def getLocalVariables(abiPath, tvcPath):
 #
 def stringToHex(inputString):
     return "".join(hex(ord(x))[2:] for x in inputString)
+
+# ==============================================================================
+#
+def getNowTimestamp():
+    dt = datetime.now()
+    unixtime = round(dt.timestamp())
+    return unixtime
 
 # ==============================================================================
 #

@@ -44,6 +44,7 @@ abstract contract DnsRecordBase is IDnsRecord
     //========================================
     // Variables
     string   internal static _domainName;
+    bool     internal        _nameIsValid;
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
 
@@ -328,6 +329,12 @@ abstract contract DnsRecordBase is IDnsRecord
     modifier Expired
     {
         require(isExpired(), ERROR_DOMAIN_IS_NOT_EXPIRED);
+        _;
+    }
+
+    modifier NameIsValid
+    {
+        require(_nameIsValid, ERROR_DOMAIN_NAME_NOT_VALID);
         _;
     }
 }
