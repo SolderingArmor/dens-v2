@@ -189,21 +189,17 @@ class Test_2_DeployWithMultisigOwner(unittest.TestCase):
 #
 class Test_3_WrongNames(unittest.TestCase):
     
-    signer  = generateSigner()
-    
-    # THIS GIVES OUT OF GAS!!!
-    # {"CODE": 0  , "DOMAIN": createDomainDictionary("longest00000fine000domain000name000with63letters000times000four/perfectly000fine000domain000name000with63letters000inside000kek/perfectly000fine000domain000name000with63letters000inside000kek/perfectly000fine000domain000name000with63letters000inside000kek")},
-    # CODE is expected answer code when deploying;
-    # 200 = ERROR_DOMAIN_NAME_NOT_VALID
+    signer = generateSigner()
     domainDictList = [
-        {"CODE": 200, "DOMAIN": createDomainDictionary("org-org")},
+        {"CODE": 0,   "DOMAIN": createDomainDictionary("org-org")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("ORG")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("F@!#ING")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("ddd//dd")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("//")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("under_score")},
-        {"CODE": 0,   "DOMAIN": createDomainDictionary("perfectly000fine000domain000name000with63letters000inside000kek")},
+        {"CODE": 0,   "DOMAIN": createDomainDictionary("good-domain-name-with-31-letter")},
+        {"CODE": 200, "DOMAIN": createDomainDictionary("perfectly000fine000domain000name000with63letters000inside000kek")},
         {"CODE": 0,   "DOMAIN": createDomainDictionary("one/two/three/four")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("one/two/three/four/five")},
         {"CODE": 200, "DOMAIN": createDomainDictionary("too000long000domain000name000with64letters000inside000kekekelolz")},
@@ -288,7 +284,10 @@ class Test_4_Prolongate(unittest.TestCase):
         result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
 
-    
+# ==============================================================================
+#
+
+
 # ==============================================================================
 # 
 unittest.main()

@@ -14,13 +14,13 @@ abstract contract DnsRecordBase is IDnsRecord
     //========================================
     // Constants
     address constant addressZero = address.makeAddrStd(0, 0); //
-    uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days    in seconds
-    uint32  constant ninetyDays  = tenDays * 9;               // 90 days    in seconds
+    uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
+    uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
     
     uint32  constant MAX_SEGMENTS_NUMBER   = 4;
     uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
     uint32  constant MIN_SEGMENTS_LENGTH   = 2;
-    uint32  constant MAX_SEGMENTS_LENGTH   = 63;
+    uint32  constant MAX_SEGMENTS_LENGTH   = 31;
     uint32  constant MAX_DOMAIN_LENGTH     = MAX_SEGMENTS_NUMBER * MAX_SEGMENTS_LENGTH + MAX_SEPARATORS_NUMBER;
 
     //========================================
@@ -177,16 +177,18 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function splitString(string stringToSplit) internal pure returns(string[]) 
     {
-        string[] finalWordsArray;
-        uint len = stringToSplit.byteLength();
+        require(stringToSplit.byteLength() >= MIN_SEGMENTS_LENGTH && stringToSplit.byteLength() <= MAX_DOMAIN_LENGTH, ERROR_DOMAIN_NAME_NOT_VALID);
+        
+        bytes stringToSplitBytes = bytes(stringToSplit);
+        string[] finalWordsArray;        
         
         uint lastPos = 0;
-        for(uint i = 0; i < len; i++) 
+        for(uint i = 0; i < stringToSplitBytes.length; i++) 
         {
-            byte letter = bytes(stringToSplit.substr(i, 1))[0];
-            if(letter == "/")
+            byte letter = stringToSplitBytes[i];
+            if(letter == 0x2F) // slash
             {
-                if(i - lastPos > 0) // don't add empty strings
+                if(i - lastPos > 0) // don't add empty strings; we ignore errors here because "_validateDomainName" will take care of it;
                 {
                     finalWordsArray.push(stringToSplit.substr(lastPos, i - lastPos));
                 }
@@ -195,14 +197,13 @@ abstract contract DnsRecordBase is IDnsRecord
         }
 
         // Add last word
-        if(len - lastPos > 0)
+        if(stringToSplitBytes.length - lastPos > 0)
         {
-            finalWordsArray.push(stringToSplit.substr(lastPos, len - lastPos - 1));
+            finalWordsArray.push(stringToSplit.substr(lastPos, stringToSplitBytes.length - lastPos - 1));
         }
 
         return finalWordsArray;
     }
-
 
     //========================================
     /// @notice Validate domain segment length;
@@ -211,15 +212,10 @@ abstract contract DnsRecordBase is IDnsRecord
     ///
     /// @return bool: if length is valid or not;
     //
-    function _validateSegmentLength(uint32 length) internal pure returns (bool)
+    function _validateSegmentLength(uint32 length) internal inline pure returns (bool)
     {
         // segment too short or too long, or two "/" in a row, error;
-        if(length < MIN_SEGMENTS_LENGTH || length > MAX_SEGMENTS_LENGTH)
-        {
-            return false;
-        }
-
-        return true;
+        return (length >= MIN_SEGMENTS_LENGTH && length <= MAX_SEGMENTS_LENGTH);
     }
 
     //========================================
@@ -229,9 +225,9 @@ abstract contract DnsRecordBase is IDnsRecord
     ///
     /// @return bool: if the name is valid or not;
     //
-    function _validateDomainName(string domainName) internal pure returns (bool)
+    function _validateDomainName(bytes domainName) internal pure returns (bool)
     {
-        if(domainName.byteLength() < MIN_SEGMENTS_LENGTH || domainName.byteLength() > MAX_DOMAIN_LENGTH)
+        if(domainName.length < MIN_SEGMENTS_LENGTH || domainName.length > MAX_DOMAIN_LENGTH)
         {
             return false;
         }
@@ -239,14 +235,15 @@ abstract contract DnsRecordBase is IDnsRecord
         uint32 separatorCount   = 0;
         uint32 lastSeparatorPos = 0;
 
-        for(uint32 i = 0; i < domainName.byteLength(); i++)
+        for(uint32 i = 0; i < domainName.length; i++)
         {
-            byte letter  = bytes(domainName.substr(i, 1))[0];
-            bool numbers = (letter >= 0x30 && letter <= 0x39);
-            bool lower   = (letter >= 0x61 && letter <= 0x7A);
-            bool slash   = (letter == 0x2F);
+            byte  letter  = domainName[i];
+            bool  numbers = (letter >= 0x30 && letter <= 0x39);
+            bool  lower   = (letter >= 0x61 && letter <= 0x7A);
+            bool  dash    = (letter == 0x2D);
+            bool  slash   = (letter == 0x2F);
 
-            if(!numbers && !lower && !slash)
+            if(!numbers && !lower && !dash && !slash)
             {
                 return false;
             }
@@ -266,7 +263,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
         // last segment has no separator at the end, duplicate the check
         uint32 extraSlash = (lastSeparatorPos == 0 ? 0 : 1);
-        uint32 len = domainName.byteLength() - lastSeparatorPos - extraSlash;
+        uint32 len        = uint32(domainName.length) - lastSeparatorPos - extraSlash;
         if(!_validateSegmentLength(len)) {    return false;    }
 
         if(separatorCount > MAX_SEPARATORS_NUMBER)
