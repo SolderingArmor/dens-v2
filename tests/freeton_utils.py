@@ -227,15 +227,84 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
 
 # ==============================================================================
 #
-def getTransactionGraphQL(messageID):
-    paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){aborted,compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}}}", variables={"msg": messageID})
-    result      = asyncClient.net.query(params=paramsQuery)
-    return result
+def decodeMessageBody(boc, possibleAbiFiles):
+    for abi in possibleAbiFiles:
+        try:
+            params = ParamsOfDecodeMessageBody(abi=getAbi(abi), body=boc, is_internal=True)
+            result = asyncClient.abi.decode_message_body(params=params)
+            return (abi, result)
 
-def getExitCodeFromMessageID(messageID):
-    result       = getTransactionGraphQL(messageID)
-    realExitCode = result.result["data"]["transactions"][0]["compute"]["exit_code"]
+        except TonException as ton:
+            pass
+
+    return ("", "")
+
+def getMessageGraphQL(messageID, fields):
+    paramsQuery = ParamsOfQuery(query="query($msg: String){messages(filter:{id:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
+    result      = asyncClient.net.query(params=paramsQuery)
+    
+    if len(result.result["data"]["messages"]) > 0:
+        return result.result["data"]["messages"][0]
+    else:
+        return ""
+
+def getTransactionGraphQL(messageID, fields):
+    #paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){aborted,compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}}}", variables={"msg": messageID})
+    paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
+    result      = asyncClient.net.query(params=paramsQuery)
+
+    if len(result.result["data"]["transactions"]) > 0:
+        return result.result["data"]["transactions"][0]
+    else:
+        return ""
+
+def getExitCodeFromMessageID(messageID, fields):
+    result       = getTransactionGraphQL(messageID, fields)
+    #realExitCode = result.result["data"]["transactions"][0]["compute"]["exit_code"]
+    realExitCode = result["compute"]["exit_code"]
     return realExitCode
+
+# ==============================================================================
+#
+def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
+
+    messageFilters     = "id, src, dst, body"
+    transactionFilters = "out_msgs, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}"
+
+    resultMsg                = getMessageGraphQL(messageID, messageFilters)
+    if resultMsg == "":
+        return []        
+    (abi, resultMessageBody) = decodeMessageBody(resultMsg["body"], abiFilesArray)
+    resultTransaction        = getTransactionGraphQL(messageID, transactionFilters)
+
+    arrayMsg = [{
+        "SOURCE":             resultMsg["src"],
+        "DEST":               resultMsg["dst"],
+        "MESSAGE_ID:":        messageID,
+        "PARENT_MESSAGE_ID:": parentMessageID,
+        "TARGE_ABI":          abi,
+        "CALL_TYPE":          resultMessageBody.body_type   if resultMessageBody != "" else "---",
+        "FUNCTION_NAME":      resultMessageBody.name        if resultMessageBody != "" else "---",
+        "FUNCTION_PARAMS":    resultMessageBody.value       if resultMessageBody != "" else "---",
+        "MSG_HEADER":         resultMessageBody.header      if resultMessageBody != "" else "---",
+        "OUT_MSGS":           resultTransaction["out_msgs"] if resultTransaction != "" else [],
+        "TX_DETAILS":         resultTransaction,
+    }]
+
+    if resultTransaction != "":
+        for msg in resultTransaction["out_msgs"]:
+            arrayResult = _unwrapMessages(msg, messageID, abiFilesArray)
+            arrayMsg   += arrayResult
+    
+    return arrayMsg
+
+def unwrapMessages(messageIdArray, abiFilesArray):
+    arrayMsg = []
+    for msg in messageIdArray:
+        arrayResult = _unwrapMessages(msg, "", abiFilesArray)
+        arrayMsg   += arrayResult
+    
+    return arrayMsg
 
 # ==============================================================================
 #

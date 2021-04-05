@@ -83,14 +83,15 @@ contract DnsRecord is DnsRecordBase
         }
         else if(tonsToInclude > 0) // we won't send anything with 0 TONs included
         {
-            _sendRegistrationRequest(tonsToInclude);
+            _sendRegistrationRequest(newOwnerID, tonsToInclude);
         }
     }
     
     function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired NameIsValid
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
-        
+        require(tonsToInclude <= msg.value);
+
         // reset ownership first
         _changeOwnership(0);        
         _claimExpired(newOwnerID, tonsToInclude);
@@ -98,11 +99,11 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function _sendRegistrationRequest(uint128 tonsToInclude) internal view
+    function _sendRegistrationRequest(uint256 newOwnerID, uint128 tonsToInclude) internal view
     {
         // flag + 1 - means that the sender wants to pay transfer fees separately from contract's balance,
         // because we want to send exactly "tonsToInclude" amount;
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, _whoisInfo.ownerID, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, newOwnerID, msg.sender);
     }
     
     //========================================
