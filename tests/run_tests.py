@@ -117,7 +117,7 @@ def callDomainFunctionFromMultisig(domainDict, msigDict, functionName, functionP
 
 # ==============================================================================
 # 
-class Test_1_SameNameDeploy(unittest.TestCase):
+class Test_01_SameNameDeploy(unittest.TestCase):
 
     signer = generateSigner()
     domain = createDomainDictionary("org")
@@ -147,7 +147,7 @@ class Test_1_SameNameDeploy(unittest.TestCase):
 
 # ==============================================================================
 #
-class Test_2_DeployWithMultisigOwner(unittest.TestCase):
+class Test_02_DeployWithMultisigOwner(unittest.TestCase):
     
     signerD = generateSigner()
     signerM = generateSigner()
@@ -189,7 +189,7 @@ class Test_2_DeployWithMultisigOwner(unittest.TestCase):
 
 # ==============================================================================
 #
-class Test_3_WrongNames(unittest.TestCase):
+class Test_03_WrongNames(unittest.TestCase):
     
     signer = generateSigner()
     domainDictList = [
@@ -230,7 +230,7 @@ class Test_3_WrongNames(unittest.TestCase):
 
 # ==============================================================================
 #
-class Test_4_Prolongate(unittest.TestCase):
+class Test_04_Prolongate(unittest.TestCase):
     
     signerD = generateSigner()
     signerM = generateSigner()
@@ -305,7 +305,7 @@ class Test_4_Prolongate(unittest.TestCase):
 
 # ==============================================================================
 #
-class Test_5_ClaimFFA(unittest.TestCase):
+class Test_05_ClaimFFA(unittest.TestCase):
     
     signerD  = generateSigner()
     signerM1 = generateSigner()
@@ -379,10 +379,69 @@ class Test_5_ClaimFFA(unittest.TestCase):
         result = callDomainFunction(domainDict=self.domain2, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
 
+# ==============================================================================
+# TODO
+class Test_06_ClaimMoney(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
 
 # ==============================================================================
-#
+# TODO
+class Test_07_ClaimOwner(unittest.TestCase):       
 
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_08_ClaimDeny(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_09_RegisterWithNoParent(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_10_CheckWhoisStatistics(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_11_ChangeWhois(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_12_ReleaseDomain(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+# ==============================================================================
+# TODO
+class Test_11_WithdrawBalance(unittest.TestCase):       
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
 
 # ==============================================================================
 # 
