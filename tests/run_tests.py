@@ -420,20 +420,97 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         print("Running:", self.__class__.__name__)
 
 # ==============================================================================
-# TODO
-class Test_11_ChangeWhois(unittest.TestCase):       
-
+# 
+class Test_11_ChangeWhois(unittest.TestCase):   
+    
+    signerD = generateSigner()
+    signerM = generateSigner()
+    domain  = createDomainDictionary("domaino")
+    msig    = createMultisigDictionary(signerM.keys.public)
+    
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain["ADDR"], TON * 2 )
+        giverGive(self.msig  ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig, self.signerM)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. change Whois and get Whois
+    def test_4(self):
+        endpointAddress = self.msig["ADDR"]
+        comment         = stringToHex("wassup you boyz!!!@@#%")
+        
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpointAddress}, value=10000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="changeComment", functionParams={"newComment":comment}, value=10000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+
+        result = runDomainFunction(domainDict=self.domain, functionName="getWhois", functionParams={})
+        self.assertEqual(result["endpointAddress"], endpointAddress)
+        self.assertEqual(result["comment"],         comment        )
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
 # TODO
-class Test_12_ReleaseDomain(unittest.TestCase):       
-
+class Test_12_ReleaseDomain(unittest.TestCase): 
+    
+    signerD = generateSigner()
+    signerM = generateSigner()
+    domain  = createDomainDictionary("dominos")
+    msig    = createMultisigDictionary(signerM.keys.public)
+    
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain["ADDR"], TON * 2 )
+        giverGive(self.msig  ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig, self.signerM)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. change Whois and get Whois
+    def test_4(self):
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="releaseDomain", functionParams={}, value=10000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+
+        result = runDomainFunction(domainDict=self.domain, functionName="getWhois", functionParams={})
+        self.assertEqual(result["ownerID"],          "0x" + ZERO_PUBKEY)
+        self.assertEqual(result["dtExpires"],        "0"               )
+        self.assertEqual(result["endpointAddress"],  ZERO_ADDRESS      )
+        self.assertEqual(result["registrationType"], "3"               )
+        self.assertEqual(result["comment"],          ""                )
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+
 
 # ==============================================================================
 # TODO
