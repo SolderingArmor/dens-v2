@@ -45,6 +45,7 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.domainName                 = _domainName;
         _whoisInfo.parentDomainName           = parentName;
        (_whoisInfo.parentDomainAddress, )     = calculateDomainAddress(parentName);
+        _whoisInfo.registrationType           = REG_TYPE.DENY; //sanity
         _whoisInfo.dtCreated                  = now;
         _whoisInfo.dtExpires                  = 0; // sanity
         

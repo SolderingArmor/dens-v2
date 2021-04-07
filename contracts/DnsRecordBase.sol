@@ -149,6 +149,12 @@ abstract contract DnsRecordBase is IDnsRecord
     {
         if(msg.pubkey() != 0) { tvm.accept(); }
 
+        // Increase counter only if new owner is different
+        if(newOwnerID != _whoisInfo.ownerID)
+        {
+            _whoisInfo.totalOwnersNum += 1;
+        }
+
         _changeOwnership(newOwnerID);
 
         if(msg.value > 0) { msg.sender.transfer(0, true, 64); }

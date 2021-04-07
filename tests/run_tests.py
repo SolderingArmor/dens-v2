@@ -6,7 +6,7 @@ from freeton_utils import *
 import unittest
 import time
 import sys
-import pprint
+from pprint import pprint
 
 TON = 1000000000
 transactionFilters = "out_msgs, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}"
@@ -33,11 +33,17 @@ changeConfig(CUSTOM_URL, USE_GIVER, THROW)
 
 # ==============================================================================
 # 
+clientConfig  = ClientConfig()
+clientConfig.network.server_address = "https://net.ton.dev" if CUSTOM_URL == "" else CUSTOM_URL
+asyncClient   = TonClient(config=clientConfig)
+
+# ==============================================================================
+# 
 def createDomainDictionary(name):
 
     ABI  = "../bin/DnsRecordTEST.abi.json"
     TVC  = "../bin/DnsRecordTEST.tvc"
-    CODE = getCodeFromTvc(TVC)
+    CODE = getCodeFromTvc(asyncClient, TVC)
     INIT = {"_domainName":stringToHex(name),"_domainCode": CODE}
     
     domainDictionary = {
@@ -47,7 +53,7 @@ def createDomainDictionary(name):
         "TVC":    TVC,
         "CODE":   CODE,
         "INIT":   INIT,
-        "ADDR":   getAddressZeroPubkey(abiPath=ABI, tvcPath=TVC, initialData=INIT)
+        "ADDR":   getAddressZeroPubkey(tonClient=asyncClient, abiPath=ABI, tvcPath=TVC, initialData=INIT)
     }
     return domainDictionary
 
@@ -65,7 +71,7 @@ def createMultisigDictionary(pubkey):
         "ABI":    ABI,
         "TVC":    TVC,
         "CONSTR": CONSTRUCTOR,
-        "ADDR":   getAddress(abiPath=ABI, tvcPath=TVC, signer=SIGNER, initialPubkey=pubkey, initialData={})
+        "ADDR":   getAddress(tonClient=asyncClient, abiPath=ABI, tvcPath=TVC, signer=SIGNER, initialPubkey=pubkey, initialData={})
     }
     return multisigDictionary
 
@@ -73,26 +79,26 @@ def createMultisigDictionary(pubkey):
 # DOMAIN MANAGEMENT
 #
 def deployDomain(domainDict, ownerID, signer):
-    result = deployContract(abiPath=domainDict["ABI"], tvcPath=domainDict["TVC"], constructorInput={"ownerID":ownerID}, initialData=domainDict["INIT"], signer=signer, initialPubkey=ZERO_PUBKEY)
+    result = deployContract(tonClient=asyncClient, abiPath=domainDict["ABI"], tvcPath=domainDict["TVC"], constructorInput={"ownerID":ownerID}, initialData=domainDict["INIT"], signer=signer, initialPubkey=ZERO_PUBKEY)
     return result
 
 def callDomainFunction(domainDict, functionName, functionParams, signer):
-    result = callFunction(abiPath=domainDict["ABI"], contractAddress=domainDict["ADDR"], functionName=functionName, functionParams=functionParams, signer=signer)
+    result = callFunction(tonClient=asyncClient, abiPath=domainDict["ABI"], contractAddress=domainDict["ADDR"], functionName=functionName, functionParams=functionParams, signer=signer)
     return result
 
 def runDomainFunction(domainDict, functionName, functionParams):
-    result = runFunction(abiPath=domainDict["ABI"], contractAddress=domainDict["ADDR"], functionName=functionName, functionParams=functionParams)
+    result = runFunction(tonClient=asyncClient, abiPath=domainDict["ABI"], contractAddress=domainDict["ADDR"], functionName=functionName, functionParams=functionParams)
     return result
 
 # ==============================================================================
 # MULTISIG MANAGEMENT
 # 
 def deployMultisig(msigDict, signer):
-    result = deployContract(abiPath=msigDict["ABI"], tvcPath=msigDict["TVC"], constructorInput=msigDict["CONSTR"], initialData={}, signer=signer, initialPubkey=signer.keys.public)
+    result = deployContract(tonClient=asyncClient, abiPath=msigDict["ABI"], tvcPath=msigDict["TVC"], constructorInput=msigDict["CONSTR"], initialData={}, signer=signer, initialPubkey=signer.keys.public)
     return result
 
 def callMultisigFunction(msigDict, functionName, functionParams, signer):
-    result = callFunction(abiPath=msigDict["ABI"], contractAddress=msigDict["ADDR"], functionName=functionName, functionParams=functionParams, signer=signer)
+    result = callFunction(tonClient=asyncClient, abiPath=msigDict["ABI"], contractAddress=msigDict["ADDR"], functionName=functionName, functionParams=functionParams, signer=signer)
     return result
 
 def callMultisigFunctionTransfer(msigDict, addressDest, value, payload, flags, signer):
@@ -100,7 +106,7 @@ def callMultisigFunctionTransfer(msigDict, addressDest, value, payload, flags, s
     return result
 
 def runMultisigFunction(msigDict, functionName, functionParams):
-    result = runFunction(abiPath=msigDict["ABI"], contractAddress=msigDict["ADDR"], functionName=functionName, functionParams=functionParams)
+    result = runFunction(tonClient=asyncClient, abiPath=msigDict["ABI"], contractAddress=msigDict["ADDR"], functionName=functionName, functionParams=functionParams)
     return result
 
 # ==============================================================================
@@ -128,7 +134,7 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 2)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2)
 
     # 2. Deploy "org"
     def test_2(self):
@@ -160,8 +166,8 @@ class Test_02_DeployWithMultisigOwner(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 2 )
-        giverGive(self.msig  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -214,7 +220,7 @@ class Test_03_WrongNames(unittest.TestCase):
     # 1. Giver
     def test_1(self):
         for rec in self.domainDictList:
-            giverGive(rec["DOMAIN"]["ADDR"], TON * 2)
+            giverGive(asyncClient, rec["DOMAIN"]["ADDR"], TON * 2)
         
     # 2. Deploys
     def test_2(self):
@@ -240,7 +246,7 @@ class Test_04_Prolongate(unittest.TestCase):
     # we know we have only 1 internal message, that's why this wrapper has no filters
     def _getExitCode(self, msgIdArray):
         abiArray     = [self.domain["ABI"], self.msig["ABI"]]
-        msgArray     = unwrapMessages(msgIdArray, abiArray)
+        msgArray     = unwrapMessages(asyncClient, msgIdArray, abiArray)
         realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
         return realExitCode        
 
@@ -250,8 +256,8 @@ class Test_04_Prolongate(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 2)
-        giverGive(self.msig  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2)
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -318,7 +324,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
     # we know we have only 1 internal message, that's why this wrapper has no filters
     def _getExitCode(self, msgIdArray):
         abiArray     = [self.domain1["ABI"], self.msig1["ABI"]]
-        msgArray     = unwrapMessages(msgIdArray, abiArray)
+        msgArray     = unwrapMessages(asyncClient, msgIdArray, abiArray)
         realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
         return realExitCode        
 
@@ -328,10 +334,10 @@ class Test_05_ClaimFFA(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain1["ADDR"], TON * 2)
-        giverGive(self.domain2["ADDR"], TON * 2)
-        giverGive(self.msig1  ["ADDR"], TON * 20)
-        giverGive(self.msig2  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain1["ADDR"], TON * 2)
+        giverGive(asyncClient, self.domain2["ADDR"], TON * 2)
+        giverGive(asyncClient, self.msig1  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.msig2  ["ADDR"], TON * 20)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -360,7 +366,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
         realExitCode = self._getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 0)
 
-        result = runDomainFunction(domainDict=self.domain2, functionName="getRegistrationType", functionParams={})
+        result = runDomainFunction(domainDict=self.domain1, functionName="getRegistrationType", functionParams={})
         self.assertEqual(result, "0")
 
         result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM2)
@@ -399,9 +405,82 @@ class Test_07_ClaimOwner(unittest.TestCase):
 # TODO
 class Test_08_ClaimDeny(unittest.TestCase):       
 
+    signerD  = generateSigner()
+    signerM1 = generateSigner()
+    signerM2 = generateSigner()
+    domain1  = createDomainDictionary("net")
+    domain2  = createDomainDictionary("net/kek")
+    msig1    = createMultisigDictionary(signerM1.keys.public)
+    msig2    = createMultisigDictionary(signerM2.keys.public)
+
+    # we know we have only 1 internal message, that's why this wrapper has no filters
+    def _getExitCode(self, msgIdArray):
+        abiArray     = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray     = unwrapMessages(asyncClient, msgIdArray, abiArray)
+        realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
+        return realExitCode        
+
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(asyncClient, self.domain1["ADDR"], TON * 2)
+        giverGive(asyncClient, self.domain2["ADDR"], TON * 2)
+        giverGive(asyncClient, self.msig1  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.msig2  ["ADDR"], TON * 20)
+
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig1, self.signerM1)
+        result = deployMultisig(self.msig2, self.signerM2)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = deployDomain(self.domain1, "0x" + self.msig1["ADDR"][2:], self.signerM1)
+        self.assertEqual(result[1], 0)
+
+    # 4. Deploy "net/kek"
+    def test_4(self):
+        result = deployDomain(self.domain2, "0x" + self.msig2["ADDR"][2:], self.signerM2)
+        self.assertEqual(result[1], 0)
+
+        result = runDomainFunction(domainDict=self.domain2, functionName="getOwnerID", functionParams={})
+        self.assertEqual(result, "0x0000000000000000000000000000000000000000000000000000000000000000")
+
+    # 5. Claim
+    def test_5(self):
+        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1, signer=self.signerM1)
+        self.assertEqual(result[1], 0)
+        
+        realExitCode = self._getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 0)
+
+        result = runDomainFunction(domainDict=self.domain1, functionName="getRegistrationType", functionParams={})
+        self.assertEqual(result, "3")
+
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM2)
+        self.assertEqual(result[1], 0)
+        
+        # Check registration result
+        abiArray = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
+                regResult = msg["FUNCTION_PARAMS"]["result"]
+                self.assertEqual(regResult, "2") # DENIED
+        
+        result = runDomainFunction(domainDict=self.domain2, functionName="getOwnerID", functionParams={})
+        self.assertEqual(result, "0x" + ZERO_PUBKEY)
+
+    # 5. Cleanup
+    def test_6(self):
+        result = callDomainFunction(domainDict=self.domain1, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+        result = callDomainFunction(domainDict=self.domain2, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
 # TODO
@@ -434,8 +513,8 @@ class Test_11_ChangeWhois(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 2 )
-        giverGive(self.msig  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -481,8 +560,8 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 2 )
-        giverGive(self.msig  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -527,8 +606,8 @@ class Test_13_WithdrawBalance(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain["ADDR"], TON * 6 )
-        giverGive(self.msig  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.domain["ADDR"], TON * 6 )
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -545,10 +624,10 @@ class Test_13_WithdrawBalance(unittest.TestCase):
         amount = 4000000000
 
         # Get balances
-        result = getAccountGraphQL(self.domain["ADDR"], "balance(format:DEC)")
+        result = getAccountGraphQL(asyncClient, self.domain["ADDR"], "balance(format:DEC)")
         balanceDomain1 = int(result["balance"])
         
-        result = getAccountGraphQL(self.msig["ADDR"], "balance(format:DEC)")
+        result = getAccountGraphQL(asyncClient, self.msig["ADDR"], "balance(format:DEC)")
         balanceMsig1 = int(result["balance"])
         
         # Withdraw
@@ -556,10 +635,10 @@ class Test_13_WithdrawBalance(unittest.TestCase):
         self.assertEqual(result[1], 0)
 
         # Get balances again
-        result = getAccountGraphQL(self.domain["ADDR"], "balance(format:DEC)")
+        result = getAccountGraphQL(asyncClient, self.domain["ADDR"], "balance(format:DEC)")
         balanceDomain2 = int(result["balance"])
 
-        result = getAccountGraphQL(self.msig["ADDR"], "balance(format:DEC)")
+        result = getAccountGraphQL(asyncClient, self.msig["ADDR"], "balance(format:DEC)")
         balanceMsig2 = int(result["balance"])
 
         # I DON'T KNOW HOW TO CALCULATE EXACT BALANCE! sigh
