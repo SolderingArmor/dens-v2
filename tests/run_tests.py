@@ -378,7 +378,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
         result = runDomainFunction(domainDict=self.domain2, functionName="getOwnerID", functionParams={})
         self.assertEqual(result, "0x" + self.msig2["ADDR"][2:])
 
-    # 5. Cleanup
+    # 6. Cleanup
     def test_6(self):
         result = callDomainFunction(domainDict=self.domain1, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
@@ -402,7 +402,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         print("Running:", self.__class__.__name__)
 
 # ==============================================================================
-# TODO
+# 
 class Test_08_ClaimDeny(unittest.TestCase):       
 
     signerD  = generateSigner()
@@ -475,7 +475,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         result = runDomainFunction(domainDict=self.domain2, functionName="getOwnerID", functionParams={})
         self.assertEqual(result, "0x" + ZERO_PUBKEY)
 
-    # 5. Cleanup
+    # 6. Cleanup
     def test_6(self):
         result = callDomainFunction(domainDict=self.domain1, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
@@ -483,12 +483,54 @@ class Test_08_ClaimDeny(unittest.TestCase):
         self.assertEqual(result[1], 0)
 
 # ==============================================================================
-# TODO
-class Test_09_RegisterWithNoParent(unittest.TestCase):       
+# 
+class Test_09_RegisterWithNoParent(unittest.TestCase):
+
+    signerD = generateSigner()
+    signerM = generateSigner()
+    domain  = createDomainDictionary("net/some/shit")
+    msig    = createMultisigDictionary(signerM.keys.public)
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2)
+        giverGive(asyncClient, self.msig  ["ADDR"], TON * 20)
+
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig, self.signerM)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net/some/shit"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerM)
+        self.assertEqual(result[1], 0)
+
+    # 4. Claim
+    def test_4(self):
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+        
+        # Check onBounce/aborted
+        abiArray = [self.domain["ABI"], self.msig["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "receiveRegistrationRequest":
+                regResult = msg["TX_DETAILS"]["aborted"]
+                self.assertEqual(regResult, True) # Aborted
+
+        # Owner should still be 0
+        result = runDomainFunction(domainDict=self.domain, functionName="getOwnerID", functionParams={})
+        self.assertEqual(result, "0x" + ZERO_PUBKEY)
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
 # TODO
@@ -546,7 +588,7 @@ class Test_11_ChangeWhois(unittest.TestCase):
         self.assertEqual(result[1], 0)
 
 # ==============================================================================
-# TODO
+# 
 class Test_12_ReleaseDomain(unittest.TestCase): 
     
     signerD = generateSigner()
@@ -592,7 +634,7 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 
 
 # ==============================================================================
-# TODO
+# 
 class Test_13_WithdrawBalance(unittest.TestCase):
     
     signerD = generateSigner()
@@ -655,3 +697,6 @@ class Test_13_WithdrawBalance(unittest.TestCase):
 # ==============================================================================
 # 
 unittest.main()
+
+# ==============================================================================
+# 
