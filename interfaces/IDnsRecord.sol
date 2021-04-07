@@ -111,7 +111,7 @@ interface IDnsRecord
     ///
     /// @dev If you set both newOwnerAddress and newOwnerPubkey to 0, you will loose ownership of the domain!
     //
-    function changeOwnership(uint256 newOwnerID) external;
+    function changeOwner(uint256 newOwnerID) external;
     
     /// @notice Change sub-domain registration type;
     ///
@@ -134,6 +134,10 @@ interface IDnsRecord
     function prolongate() external;
     
     /// @notice Claim an expired DeNS Record; claiming is the same as registering new domain, except you don't deploy;
+    ///
+    /// @dev If REG_TYPE == REG_TYPE.MONEY on parent, all extra TONs (from msg.value) that exceed "tonsToInclude" will remain on child domain;
+    ///      Plan on "msg.value" and "tonsToInclude" values carefully;
+    ///      P.S. "msg.value" = "tonsToInclude" + possible fees
     ///
     /// @param newOwnerID    - address or pubkey  of a new owner; can be (0, 0);
     /// @param tonsToInclude - TONs to include in message value; TONs need to come with inbound message, it should be enough to pay for domain registration and for all gas fees;

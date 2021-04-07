@@ -137,7 +137,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function _changeOwnership(uint256 newOwnerID) internal
+    function _changeOwner(uint256 newOwnerID) internal
     {
         _whoisInfo.ownerID          = newOwnerID;
         _whoisInfo.endpointAddress  = addressZero;
@@ -145,7 +145,7 @@ abstract contract DnsRecordBase is IDnsRecord
         _whoisInfo.comment          = "";
     }
 
-    function changeOwnership(uint256 newOwnerID) external override onlyOwner notExpired
+    function changeOwner(uint256 newOwnerID) external override onlyOwner notExpired
     {
         if(msg.pubkey() != 0) { tvm.accept(); }
 
@@ -155,7 +155,7 @@ abstract contract DnsRecordBase is IDnsRecord
             _whoisInfo.totalOwnersNum += 1;
         }
 
-        _changeOwnership(newOwnerID);
+        _changeOwner(newOwnerID);
 
         if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }

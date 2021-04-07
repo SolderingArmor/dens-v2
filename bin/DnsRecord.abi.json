@@ -279,7 +279,7 @@
 			]
 		},
 		{
-			"name": "changeOwnership",
+			"name": "changeOwner",
 			"inputs": [
 				{"name":"newOwnerID","type":"uint256"}
 			],

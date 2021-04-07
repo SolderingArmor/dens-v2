@@ -61,11 +61,8 @@ contract DnsRecord is DnsRecordBase
     {
         if(msg.pubkey() != 0) { tvm.accept(); }
 
-        _whoisInfo.ownerID          = 0;
-        _whoisInfo.endpointAddress  = addressZero;
-        _whoisInfo.registrationType = REG_TYPE.DENY;
-        _whoisInfo.comment          = "";
-        _whoisInfo.dtExpires        = 0;
+        _changeOwner(0);  
+        _whoisInfo.dtExpires = 0;
 
         emit domainReleased(now);
 
@@ -94,7 +91,7 @@ contract DnsRecord is DnsRecordBase
         require(tonsToInclude <= msg.value);
 
         // reset ownership first
-        _changeOwnership(0);        
+        _changeOwner(0);        
         _claimExpired(newOwnerID, tonsToInclude);
     }
 
