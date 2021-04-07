@@ -514,22 +514,65 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 
 # ==============================================================================
 # TODO
-class Test_11_WithdrawBalance(unittest.TestCase):       
-
+class Test_13_WithdrawBalance(unittest.TestCase):
+    
+    signerD = generateSigner()
+    signerM = generateSigner()
+    domain  = createDomainDictionary("dominos")
+    msig    = createMultisigDictionary(signerM.keys.public)
+    
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
 
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain["ADDR"], TON * 6 )
+        giverGive(self.msig  ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig, self.signerM)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. Withdraw some TONs
+    def test_4(self):
+        amount = 4000000000
+
+        # Get balances
+        result = getAccountGraphQL(self.domain["ADDR"], "balance(format:DEC)")
+        balanceDomain1 = int(result["balance"])
+        
+        result = getAccountGraphQL(self.msig["ADDR"], "balance(format:DEC)")
+        balanceMsig1 = int(result["balance"])
+        
+        # Withdraw
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="withdrawBalance", functionParams={"amount":amount,"dest":self.msig["ADDR"]}, value=10000000, flags=1, signer=self.signerM)
+        self.assertEqual(result[1], 0)
+
+        # Get balances again
+        result = getAccountGraphQL(self.domain["ADDR"], "balance(format:DEC)")
+        balanceDomain2 = int(result["balance"])
+
+        result = getAccountGraphQL(self.msig["ADDR"], "balance(format:DEC)")
+        balanceMsig2 = int(result["balance"])
+
+        # I DON'T KNOW HOW TO CALCULATE EXACT BALANCE! sigh
+        self.assertLess   (balanceDomain2, balanceDomain1 - amount)
+        self.assertLess   (balanceMsig2, balanceMsig1 + amount)
+        self.assertGreater(balanceMsig2, balanceMsig1)
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+
+
 # ==============================================================================
 # 
 unittest.main()
-
-# ==============================================================================
-# Decode custom BOC using ABI 
-#
-#boc = "te6ccgEBAQEAKAAAS2t6vFCADxflfdRZrf848WFZRhwB9MTzCbgDWgajIqAECjqEvjyQ"
-#params = ParamsOfDecodeMessageBody(abi=getAbi("../bin/DnsRecordTEST.abi.json"), body=boc, is_internal=True)
-#result = asyncClient.abi.decode_message_body(params=params)
-
-#print(result.body_type, result.value, result.name, result.header)
-#exit()

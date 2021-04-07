@@ -85,7 +85,7 @@ abstract contract DnsRecordBase is IDnsRecord
     {
         if(msg.pubkey() != 0) { tvm.accept(); }
 
-        dest.transfer(amount, false);
+        dest.transfer(amount, false, 1);
 
         if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }

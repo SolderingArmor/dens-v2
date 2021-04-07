@@ -174,9 +174,8 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
 #
 def runFunction(abiPath, contractAddress, functionName, functionParams):
 
-    paramsQuery  = ParamsOfQuery(query="query($acc: String){accounts(filter:{id:{eq:$acc}}){boc}}", variables={"acc": contractAddress})
-    result       = asyncClient.net.query(params=paramsQuery)
-    boc          = result.result["data"]["accounts"][0]["boc"]
+    result       = getAccountGraphQL(contractAddress, "boc")
+    boc          = result["boc"]
     
     abi          = getAbi(abiPath)
     callSet      = CallSet(function_name=functionName, input=functionParams)
@@ -207,16 +206,6 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
 
         waitParams    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=messageResult.shard_block_id, send_events=False, abi=abi)
         result        = asyncClient.processing.wait_for_transaction(params=waitParams)
-        # possibly interesting fields:
-        # result.transaction
-        # result.transaction["aborted"]
-        # result.transaction["out_msgs"]
-        # result.transaction["compute"]["success"]
-        # result.transaction["compute"]["exit_code"]
-        # result.transaction["compute"]["gas_used"]
-        # result.transaction["action"]["success"]
-        # result.transaction["action"]["valid"]
-        # result.transaction["action"]["result_code"]    
         return (result, 0, "", "")
 
     except TonException as ton:
@@ -239,6 +228,15 @@ def decodeMessageBody(boc, possibleAbiFiles):
 
     return ("", "")
 
+def getAccountGraphQL(accountID, fields):
+    paramsQuery = ParamsOfQuery(query="query($accnt: String){accounts(filter:{id:{eq:$accnt}}){" + fields + "}}", variables={"accnt": accountID})
+    result      = asyncClient.net.query(params=paramsQuery)
+    
+    if len(result.result["data"]["accounts"]) > 0:
+        return result.result["data"]["accounts"][0]
+    else:
+        return ""
+
 def getMessageGraphQL(messageID, fields):
     paramsQuery = ParamsOfQuery(query="query($msg: String){messages(filter:{id:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
     result      = asyncClient.net.query(params=paramsQuery)
@@ -249,7 +247,6 @@ def getMessageGraphQL(messageID, fields):
         return ""
 
 def getTransactionGraphQL(messageID, fields):
-    #paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){aborted,compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}}}", variables={"msg": messageID})
     paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
     result      = asyncClient.net.query(params=paramsQuery)
 
@@ -260,7 +257,6 @@ def getTransactionGraphQL(messageID, fields):
 
 def getExitCodeFromMessageID(messageID, fields):
     result       = getTransactionGraphQL(messageID, fields)
-    #realExitCode = result.result["data"]["transactions"][0]["compute"]["exit_code"]
     realExitCode = result["compute"]["exit_code"]
     return realExitCode
 
@@ -268,8 +264,8 @@ def getExitCodeFromMessageID(messageID, fields):
 #
 def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
 
-    messageFilters     = "id, src, dst, body"
-    transactionFilters = "out_msgs, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name}"
+    messageFilters     = "id, src, dst, body, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
+    transactionFilters = "out_msgs, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
 
     resultMsg                = getMessageGraphQL(messageID, messageFilters)
     if resultMsg == "":
@@ -280,6 +276,8 @@ def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
     arrayMsg = [{
         "SOURCE":             resultMsg["src"],
         "DEST":               resultMsg["dst"],
+        "VALUE":              resultMsg["value"],
+        "FEES":               {"ihr_fee":resultMsg["ihr_fee"], "import_fee":resultMsg["import_fee"], "fwd_fee":resultMsg["fwd_fee"]},
         "MESSAGE_ID:":        messageID,
         "PARENT_MESSAGE_ID:": parentMessageID,
         "TARGE_ABI":          abi,
