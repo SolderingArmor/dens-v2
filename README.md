@@ -1,13 +1,23 @@
-# freeton_dens_v2
+# Description
+
+here
+
+# How does it work?
+
+here
+
+# Tips and limitations
+
+here
 
 # Running the tests
 
 ```
 cd tests
-./run_tests.py http://192.168.0.80
+./run_tests.py http://localhost
 ```
 
-Here `http://192.168.0.80` is the address of local node of `TON OS SE`.
+Here `http://localhost` is the address of local node of `TON OS SE`.
 
 Possible arguments:
 
