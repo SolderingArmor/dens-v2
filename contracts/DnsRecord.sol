@@ -88,7 +88,11 @@ contract DnsRecord is DnsRecordBase
         // reset ownership first
         _changeOwner(0);        
         _claimExpired(newOwnerID);
-        _sendRegistrationRequest(newOwnerID);
+
+        if(_whoisInfo.segmentsCount > 1)
+        {
+            _sendRegistrationRequest(newOwnerID);
+        }
     }
 
     //========================================
