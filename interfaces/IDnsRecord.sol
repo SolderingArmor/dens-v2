@@ -135,14 +135,12 @@ interface IDnsRecord
     
     /// @notice Claim an expired DeNS Record; claiming is the same as registering new domain, except you don't deploy;
     ///
-    /// @dev If REG_TYPE == REG_TYPE.MONEY on parent, all extra TONs (from msg.value) that exceed "tonsToInclude" will remain on child domain;
-    ///      Plan on "msg.value" and "tonsToInclude" values carefully;
-    ///      P.S. "msg.value" = "tonsToInclude" + possible fees
+    /// @dev If REG_TYPE == REG_TYPE.MONEY on parent, all extra TONs (from msg.value) that exceed registration price will BE RETURNED to caller's account;
+    ///      Plan accordingly: "msg.value" should equal to registration price + all child fees + all parent fees;
     ///
-    /// @param newOwnerID    - address or pubkey  of a new owner; can be (0, 0);
-    /// @param tonsToInclude - TONs to include in message value; TONs need to come with inbound message, it should be enough to pay for domain registration and for all gas fees;
+    /// @param newOwnerID - address or pubkey  of a new owner; can be (0, 0);
     //
-    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) external;
+    function claimExpired(uint256 newOwnerID) external;
     
     /// @notice Release a domain, owner becomes no one, dtExpires becomes 0;
     //

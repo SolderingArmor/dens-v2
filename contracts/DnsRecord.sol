@@ -50,7 +50,7 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.dtExpires                  = 0; // sanity
         
         // Registering a new domain is the same as claiming the expired from this point:
-        _claimExpired(ownerID, 0);
+        _claimExpired(ownerID);
     }
 
     //========================================
@@ -71,7 +71,7 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function _claimExpired(uint256 newOwnerID, uint128 tonsToInclude) internal 
+    function _claimExpired(uint256 newOwnerID) internal 
     {
         // if it is a ROOT domain name
         if(_whoisInfo.segmentsCount == 1) 
@@ -79,29 +79,23 @@ contract DnsRecord is DnsRecordBase
             // Root domains won't need approval, internal callback right away
             _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerID);
         }
-        else if(tonsToInclude > 0) // we won't send anything with 0 TONs included
-        {
-            _sendRegistrationRequest(newOwnerID, tonsToInclude);
-        }
     }
     
-    function claimExpired(uint256 newOwnerID, uint128 tonsToInclude) public override Expired NameIsValid
+    function claimExpired(uint256 newOwnerID) public override Expired NameIsValid
     {
-        require(msg.pubkey() == 0 && msg.sender != addressZero, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
-        require(tonsToInclude <= msg.value);
+        require(msg.pubkey() == 0 && msg.sender != addressZero && msg.value > 0, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
 
         // reset ownership first
         _changeOwner(0);        
-        _claimExpired(newOwnerID, tonsToInclude);
+        _claimExpired(newOwnerID);
+        _sendRegistrationRequest(newOwnerID);
     }
 
     //========================================
     //
-    function _sendRegistrationRequest(uint256 newOwnerID, uint128 tonsToInclude) internal view
+    function _sendRegistrationRequest(uint256 newOwnerID) internal view
     {
-        // flag + 1 - means that the sender wants to pay transfer fees separately from contract's balance,
-        // because we want to send exactly "tonsToInclude" amount;
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: tonsToInclude, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 1}(_domainName, newOwnerID, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 64}(_domainName, newOwnerID, msg.sender);
     }
     
     //========================================
@@ -121,12 +115,13 @@ contract DnsRecord is DnsRecordBase
         // REG_TYPE.MONEY has a custom flow;
         if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value >= _whoisInfo.subdomainRegPrice)
         {
-            tvm.accept();
+            tvm.rawReserve(address(this).balance - msg.value + _whoisInfo.subdomainRegPrice, 0);
+
             _whoisInfo.subdomainRegAccepted += 1;
             _whoisInfo.totalFeesCollected   += _whoisInfo.subdomainRegPrice;
             emit newSubdomainRegistered(now, domainName, _whoisInfo.subdomainRegPrice);
             
-            return{value: 0, flag: 0}(REG_RESULT.APPROVED, ownerID, payerAddress); // we don't return ANY change in this case
+            return{value: 0, flag: 128}(REG_RESULT.APPROVED, ownerID, payerAddress); // we don't return ANY change in this case
         }
 
         //========================================
@@ -186,6 +181,8 @@ contract DnsRecord is DnsRecordBase
     //
     function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external override onlyRoot
     {
+        // TODO: do we need "tvm.accept()" here?
+        // TODO: do we need to test non-root attempts to send message here?
         tvm.accept();
 
         // We can't move this to a modifier because if it's there parent domain will get a Bounce message back with all the

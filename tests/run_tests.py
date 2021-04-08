@@ -369,7 +369,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
         result = runDomainFunction(domainDict=self.domain1, functionName="getRegistrationType", functionParams={})
         self.assertEqual(result, "0")
 
-        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM2)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=200000000, flags=1, signer=self.signerM2)
         self.assertEqual(result[1], 0)
         
         realExitCode = self._getExitCode(msgIdArray=result[0].transaction["out_msgs"])
@@ -386,20 +386,157 @@ class Test_05_ClaimFFA(unittest.TestCase):
         self.assertEqual(result[1], 0)
 
 # ==============================================================================
-# TODO
-class Test_06_ClaimMoney(unittest.TestCase):       
+# 
+class Test_06_ClaimMoney(unittest.TestCase):
 
+    signerD  = generateSigner()
+    signerM1 = generateSigner()
+    signerM2 = generateSigner()
+    domain1  = createDomainDictionary("domaino")
+    domain2  = createDomainDictionary("domaino/kek")
+    msig1    = createMultisigDictionary(signerM1.keys.public)
+    msig2    = createMultisigDictionary(signerM2.keys.public)
+    
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(asyncClient, self.domain1["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.domain2["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig1  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.msig2  ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig1, self.signerM1)
+        self.assertEqual(result[1], 0)
+        result = deployMultisig(self.msig2, self.signerM2)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "domaino" and "domaino/kek"
+    def test_3(self):
+        result = deployDomain(self.domain1, "0x" + self.msig1["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+        result = deployDomain(self.domain2, "0x" + self.msig1["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. change Whois and get Whois
+    def test_4(self):
+        regPrice = 1000000000
+
+        # Set registration type to MONEY
+        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1, signer=self.signerM1)
+        self.assertEqual(result[1], 0)
+
+        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeSubdomainRegPrice", functionParams={"price":regPrice}, value=100000000, flags=1, signer=self.signerM1)
+        self.assertEqual(result[1], 0)
+
+        #
+        result = getAccountGraphQL(asyncClient, self.domain1["ADDR"], "balance(format:DEC)")
+        balanceBefore = int(result["balance"])
+
+        # Claim
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=5000000000, flags=1, signer=self.signerM2)
+        self.assertEqual(result[1], 0)
+
+        # Get "storage_fees" into account
+        abiArray = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "receiveRegistrationRequest":
+                balanceBefore -= int(msg["TX_DETAILS"]["storage"]["storage_fees_collected"])
+
+        # Check new parent balance
+        result = getAccountGraphQL(asyncClient, self.domain1["ADDR"], "balance(format:DEC)")
+        balanceAfter = int(result["balance"])
+        self.assertEqual(balanceAfter, balanceBefore + regPrice)
+
+        # Check correct owner
+        result = runDomainFunction(domainDict=self.domain2, functionName="getWhois", functionParams={})
+        self.assertEqual(result["ownerID"], "0x" + self.msig2["ADDR"][2:])
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain1, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+        result = callDomainFunction(domainDict=self.domain2, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
-# TODO
-class Test_07_ClaimOwner(unittest.TestCase):       
+# 
+class Test_07_ClaimOwner(unittest.TestCase):
 
+    signerD  = generateSigner()
+    signerM1 = generateSigner()
+    signerM2 = generateSigner()
+    domain1  = createDomainDictionary("domaino")
+    domain2  = createDomainDictionary("domaino/kek")
+    msig1    = createMultisigDictionary(signerM1.keys.public)
+    msig2    = createMultisigDictionary(signerM2.keys.public)
+    
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(asyncClient, self.domain1["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.domain2["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig1  ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.msig2  ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig1, self.signerM1)
+        self.assertEqual(result[1], 0)
+        result = deployMultisig(self.msig2, self.signerM2)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "domaino" and "domaino/kek"
+    def test_3(self):
+        result = deployDomain(self.domain1, "0x" + self.msig1["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+        result = deployDomain(self.domain2, "0x" + ZERO_PUBKEY, self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. Try to claim the domain
+    def test_4(self):
+
+        # Set registration type to OWNER
+        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":2}, value=100000000, flags=1, signer=self.signerM1)
+        self.assertEqual(result[1], 0)
+
+        # Claim
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=5000000000, flags=1, signer=self.signerM2)
+        self.assertEqual(result[1], 0)
+
+        abiArray = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
+                self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "2") # DENIED
+
+        # Claim with right owner
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig1["ADDR"][2:]}, value=5000000000, flags=1, signer=self.signerM2)
+        self.assertEqual(result[1], 0)
+        abiArray = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
+                self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "1") # APPROVED
+
+        # Check correct owner
+        result = runDomainFunction(domainDict=self.domain2, functionName="getWhois", functionParams={})
+        self.assertEqual(result["ownerID"], "0x" + self.msig1["ADDR"][2:])
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain1, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
+        result = callDomainFunction(domainDict=self.domain2, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
 # 
@@ -418,7 +555,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         abiArray     = [self.domain1["ABI"], self.msig1["ABI"]]
         msgArray     = unwrapMessages(asyncClient, msgIdArray, abiArray)
         realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
-        return realExitCode        
+        return realExitCode
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -452,7 +589,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
 
     # 5. Claim
     def test_5(self):
-        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1, signer=self.signerM1)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=1000000000, flags=1, signer=self.signerM1)
         self.assertEqual(result[1], 0)
         
         realExitCode = self._getExitCode(msgIdArray=result[0].transaction["out_msgs"])
@@ -461,7 +598,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         result = runDomainFunction(domainDict=self.domain1, functionName="getRegistrationType", functionParams={})
         self.assertEqual(result, "3")
 
-        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM2)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=1100000000, flags=1, signer=self.signerM2)
         self.assertEqual(result[1], 0)
         
         # Check registration result
@@ -512,7 +649,7 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
 
     # 4. Claim
     def test_4(self):
-        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig["ADDR"][2:]}, value=200000000, flags=1, signer=self.signerM)
         self.assertEqual(result[1], 0)
         
         # Check onBounce/aborted
@@ -533,7 +670,7 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
         self.assertEqual(result[1], 0)
 
 # ==============================================================================
-# TODO
+# 
 class Test_10_CheckWhoisStatistics(unittest.TestCase):       
 
     signerD  = generateSigner()
@@ -571,7 +708,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 
     # 4. change Whois and get Whois
     def test_4(self):
-        # Change owners
+        # Change owners 6 times
         result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=10000000, flags=1, signer=self.signerM1)
         self.assertEqual(result[1], 0)
         result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig2, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig1["ADDR"][2:]}, value=10000000, flags=1, signer=self.signerM2)
@@ -592,7 +729,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1, signer=self.signerM1)
         self.assertEqual(result[1], 0)
 
-        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":100000000}, value=200000000, flags=1, signer=self.signerM2)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=1100000000, flags=1, signer=self.signerM2)
         self.assertEqual(result[1], 0)
         
         # Check registration result
@@ -602,11 +739,9 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 regResult = msg["FUNCTION_PARAMS"]["result"]
                 self.assertEqual(regResult, "2") # DENIED
-        
+
         result = runDomainFunction(domainDict=self.domain1, functionName="getWhois", functionParams={})
         self.assertEqual(result["subdomainRegDenied"], "1")
-
-        # TODO: add test that includes less money than registration costss
 
         # Money registration covers two stats: "subdomainRegAccepted" and "totalFeesCollected"
         result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1, signer=self.signerM1)
@@ -615,13 +750,27 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         result = callDomainFunctionFromMultisig(domainDict=self.domain1, msigDict=self.msig1, functionName="changeSubdomainRegPrice", functionParams={"price":1000000000}, value=100000000, flags=1, signer=self.signerM1)
         self.assertEqual(result[1], 0)
 
+        # We try to include less money than price
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=1000000000, flags=1, signer=self.signerM2)
+        self.assertEqual(result[1], 0)
+        abiArray = [self.domain1["ABI"], self.msig1["ABI"]]
+        msgArray = unwrapMessages(asyncClient, result[0].transaction["out_msgs"], abiArray)
+        for msg in msgArray:
+            if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
+                regResult = msg["FUNCTION_PARAMS"]["result"]
+                self.assertEqual(regResult, "3") # NOT_ENOUGH_MONEY
+
         # Claim
-        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig1, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:],"tonsToInclude":1000000000}, value=5000000000, flags=1, signer=self.signerM1)
+        result = callDomainFunctionFromMultisig(domainDict=self.domain2, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=2000000000, flags=1, signer=self.signerM2)
         self.assertEqual(result[1], 0)
 
         result = runDomainFunction(domainDict=self.domain1, functionName="getWhois", functionParams={})
         self.assertEqual(result["subdomainRegAccepted"], "1"         )
         self.assertEqual(result["totalFeesCollected"],   "1000000000")
+
+        # Check correct owner
+        result = runDomainFunction(domainDict=self.domain2, functionName="getWhois", functionParams={})
+        self.assertEqual(result["ownerID"], "0x" + self.msig2["ADDR"][2:])
 
     # 5. Cleanup
     def test_5(self):
@@ -783,6 +932,61 @@ class Test_13_WithdrawBalance(unittest.TestCase):
         result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
         self.assertEqual(result[1], 0)
 
+# ==============================================================================
+# 
+class Test_14_ClaimAlreadyClaimed(unittest.TestCase):       
+
+    signerD  = generateSigner()
+    signerM1 = generateSigner()
+    signerM2 = generateSigner()
+    domain   = createDomainDictionary("domaino")
+    msig1    = createMultisigDictionary(signerM1.keys.public)
+    msig2    = createMultisigDictionary(signerM2.keys.public)
+    
+    # we know we have only 1 internal message, that's why this wrapper has no filters
+    def _getExitCode(self, msgIdArray):
+        abiArray     = [self.domain["ABI"], self.msig1["ABI"]]
+        msgArray     = unwrapMessages(asyncClient, msgIdArray, abiArray)
+        realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
+        return realExitCode
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(asyncClient, self.domain["ADDR"], TON * 2 )
+        giverGive(asyncClient, self.msig1 ["ADDR"], TON * 20)
+        giverGive(asyncClient, self.msig2 ["ADDR"], TON * 20)
+        
+    # 2. Deploy multisig
+    def test_2(self):
+        result = deployMultisig(self.msig1, self.signerM1)
+        self.assertEqual(result[1], 0)
+        result = deployMultisig(self.msig2, self.signerM2)
+        self.assertEqual(result[1], 0)
+        
+    # 3. Deploy "domaino"
+    def test_3(self):
+        result = deployDomain(self.domain, "0x" + self.msig1["ADDR"][2:], self.signerD)
+        self.assertEqual(result[1], 0)
+
+    # 4. Try to claim
+    def test_4(self):
+        # Change to FFA
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig1, functionName="changeRegistrationType", functionParams={"newType":0}, value=100000000, flags=1, signer=self.signerM1)
+        self.assertEqual(result[1], 0)
+
+        # Try to claim from other multisig
+        result = callDomainFunctionFromMultisig(domainDict=self.domain, msigDict=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2["ADDR"][2:]}, value=100000000, flags=1, signer=self.signerM2)
+        realExitCode = self._getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 202) # ERROR_DOMAIN_IS_NOT_EXPIRED
+
+    # 5. Cleanup
+    def test_5(self):
+        result = callDomainFunction(domainDict=self.domain, functionName="TEST_selfdestruct", functionParams={}, signer=self.signerD)
+        self.assertEqual(result[1], 0)
 
 # ==============================================================================
 # 

@@ -30,8 +30,7 @@
 		{
 			"name": "claimExpired",
 			"inputs": [
-				{"name":"newOwnerID","type":"uint256"},
-				{"name":"tonsToInclude","type":"uint128"}
+				{"name":"newOwnerID","type":"uint256"}
 			],
 			"outputs": [
 			]
