@@ -24,6 +24,7 @@ from datetime import datetime
 #asyncClient   = TonClient(config=clientConfig)
 ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
 ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
+MSIG_GIVER    = ""
 USE_GIVER     = True
 THROW         = False
 
@@ -174,8 +175,10 @@ def deployContract(tonClient, abiPath, tvcPath, constructorInput, initialData, s
 def runFunction(tonClient, abiPath, contractAddress, functionName, functionParams):
 
     result       = getAccountGraphQL(tonClient, contractAddress, "boc")
+    if result == "":
+        return ""
+
     boc          = result["boc"]
-    
     abi          = getAbi(abiPath)
     callSet      = CallSet(function_name=functionName, input=functionParams)
     params       = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=Signer.NoSigner(), call_set=callSet)
@@ -312,8 +315,15 @@ def giverGive(tonClient, contractAddress, amountTons):
         input("Please, do it manually and then press ENTER to continue...")
         return
     
-    giverAddress = "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
-    callFunction(tonClient, "../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
+    if MSIG_GIVER == "":
+        giverAddress = "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
+        callFunction(tonClient, "../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
+    else:
+        ABI     = "../bin/SetcodeMultisigWallet.abi.json"
+        TVC     = "../bin/SetcodeMultisigWallet.tvc"
+        signer  = loadSigner(MSIG_GIVER)
+        address = getAddress(tonClient=tonClient, abiPath=ABI, tvcPath=TVC, signer=signer, initialPubkey=signer.keys.public, initialData={})
+        callFunction(tonClient=tonClient, abiPath=ABI, contractAddress=address, functionName="sendTransaction", functionParams={"dest":contractAddress, "value":amountTons, "bounce":False, "flags":1, "payload":""}, signer=signer)
 
 # ==============================================================================
 #

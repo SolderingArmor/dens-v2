@@ -156,8 +156,9 @@ contract DnsRecord is DnsRecordBase
             _whoisInfo.subdomainRegDenied += 1;
         }
 
-        // Return the change
-        return{value: 0, flag: 64}(result, ownerID, payerAddress);
+        // Return the change; guarantee that we don't spend any TONs on this account (ecxept storage fees)
+        tvm.rawReserve(address(this).balance - msg.value, 0);
+        return{value: 0, flag: 128}(result, ownerID, payerAddress);
     }
     
     //========================================
@@ -185,8 +186,7 @@ contract DnsRecord is DnsRecordBase
     //
     function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external override onlyRoot
     {
-        // TODO: do we need "tvm.accept()" here?
-        // TODO: do we need to test non-root attempts to send message here?
+        // Guarantee the acceptance of the result
         tvm.accept();
 
         // We can't move this to a modifier because if it's there parent domain will get a Bounce message back with all the
