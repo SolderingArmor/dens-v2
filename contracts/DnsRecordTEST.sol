@@ -215,11 +215,10 @@ contract DnsRecord is DnsRecordBase
 
     //========================================
     //
-    function TEST_selfdestruct() external
+    function TEST_selfdestruct(address dest) external
     {
         tvm.accept();
-        address giver = address.makeAddrStd(0, 0x55cb2fa45471db52480d9745edb65e6e9a541da6a9f0669d990ce4eb08d71a3b);
-        selfdestruct(giver);
+        selfdestruct(dest);
     }
 }
 

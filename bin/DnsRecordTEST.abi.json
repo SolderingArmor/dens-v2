@@ -70,6 +70,7 @@
 		{
 			"name": "TEST_selfdestruct",
 			"inputs": [
+				{"name":"dest","type":"address"}
 			],
 			"outputs": [
 			]
