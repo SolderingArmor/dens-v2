@@ -73,13 +73,16 @@ def getNowTimestamp():
 #
 def getValuesFromException(tonException):
     arg    = tonException.args[0]
-    error  = arg[arg.find("(Data:") + 7 : - 1]
+    error  = arg[arg.find("(Data:") + 7 : -1]
     result = ast.literal_eval(error)
 
     try:
         errorCode = result["exit_code"]
     except KeyError:
-        errorCode = ""
+        try:
+            errorCode = result["local_error"]["data"]["exit_code"]
+        except KeyError:
+            errorCode = ""
 
     try:
         errorDesc = result["description"]
@@ -91,7 +94,15 @@ def getValuesFromException(tonException):
     except KeyError:
         transID = ""
 
-    return (errorCode, errorDesc, transID)
+    try:
+        message = result["message"]
+    except KeyError:
+        try:
+            message = result["local_error"]["message"]
+        except KeyError:
+            message = ""
+
+    return {"errorCode":errorCode, "errorMessage":message, "transactionID": transID, "errorDesc": errorDesc}
 
 
 # ==============================================================================
@@ -168,13 +179,13 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
         result        = asyncClient.processing.wait_for_transaction(params=waitParams)
 
         #print(result.transaction)
-        return (result, 0, "", "")
+        return (result, {"errorCode":0, "errorMessage":"", "transactionID": "", "errorDesc": ""})
 
     except TonException as ton:
         if THROW:
             raise ton
-        (errorCode, errorDesc, transID) = getValuesFromException(ton)
-        return ({}, errorCode, errorDesc, transID)
+        exceptionDetails = getValuesFromException(ton)
+        return ({}, exceptionDetails)
 
 # ==============================================================================
 #
@@ -218,7 +229,8 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
 
         waitParams    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=messageResult.shard_block_id, send_events=False, abi=abi)
         result        = asyncClient.processing.wait_for_transaction(params=waitParams)
-        return (result, 0, "", "")
+
+        return (result, {"errorCode":0, "errorMessage":"", "transactionID": "", "errorDesc": ""})
 
     except TonException as ton:
         if THROW:
@@ -329,25 +341,6 @@ def unwrapMessages(messageIdArray, abiFilesArray):
     return arrayMsg
 
 # ==============================================================================
-# 
-def createMultisigDictionary(signer):
-
-    ABI         = "../bin/SetcodeMultisigWallet.abi.json"
-    TVC         = "../bin/SetcodeMultisigWallet.tvc"
-    CONSTRUCTOR = {"owners":["0x" + signer.keys.public],"reqConfirms":"1"}
-    SIGNER      = Signer.External(public_key=signer.keys.public)
-
-    multisigDictionary = {
-        "PUBKEY": signer.keys.public,
-        "ABI":    ABI,
-        "TVC":    TVC,
-        "CONSTR": CONSTRUCTOR,
-        "ADDR":   getAddress(abiPath=ABI, tvcPath=TVC, signer=SIGNER, initialPubkey=signer.keys.public, initialData={}),
-        "SIGNER": signer
-    }
-    return multisigDictionary
-
-# ==============================================================================
 #
 class Multisig(object):
     def __init__(self, signer: Signer = None):
@@ -389,8 +382,8 @@ def giverGetAddress():
         return "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
     else:
         signer = loadSigner(MSIG_GIVER)
-        msig   = createMultisigDictionary(signer.keys.public)
-        return msig["ADDR"]
+        msig   = Multisig(signer=signer)
+        return msig.ADDRESS
 
 def giverGive(contractAddress, amountTons):
     
@@ -405,8 +398,8 @@ def giverGive(contractAddress, amountTons):
         callFunction("../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
     else:
         signer = loadSigner(MSIG_GIVER)
-        msig   = createMultisigDictionary(signer)
-        callFunction(abiPath=msig["ABI"], contractAddress=msig["ADDR"], functionName="sendTransaction", functionParams={"dest":contractAddress, "value":amountTons, "bounce":False, "flags":1, "payload":""}, signer=msig["SIGNER"])
+        msig   = Multisig(signer=signer)
+        msig.callTransfer(addressDest=contractAddress, value=amountTons, payload="", flags=1)
 
 # ==============================================================================
 #
