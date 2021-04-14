@@ -24,7 +24,7 @@ msig   = Multisig()
 
 # Giver for TON OS SE
 giverGive(contractAddress=domain.ADDRESS, amountTons=TON*1)
-giverGive(contractAddress=domain.ADDRESS, amountTons=TON*1)
+giverGive(contractAddress=msig.ADDRESS,   amountTons=TON*1)
 
 # Deploy DnsRecord with Multisig address as owner; please note, "0:" is removed from owner to keep only uint256;
 result = domain.deploy(ownerID = "0x" + msig.ADDRESS[2:])
