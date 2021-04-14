@@ -5,7 +5,7 @@
 import freeton_utils
 from   freeton_utils import *
 from   contract_DnsRecord import DnsRecord
-from  pprint import pprint
+from   pprint import pprint
 
 TON    = 1000000000
 SERVER = "http://localhost"
