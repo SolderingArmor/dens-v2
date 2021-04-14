@@ -1,14 +1,15 @@
 # Description
 
-here
+Please visit https://freeton.domains/about for general info.
 
 # How does it work?
 
 here
 
-# Tips and limitations
 
-here
+# Manual deployment
+
+Please check `tests/manual_deployment.py` example.
 
 # Running the tests
 
