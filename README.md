@@ -4,12 +4,12 @@ Please visit https://freeton.domains/about for general info.
 
 # How does it work?
 
-here
-
+Magic...
 
 # Manual deployment
 
 Please check `tests/manual_deployment.py` example.
+
 Requirements: `ton-client-py` python library.
 
 ```
