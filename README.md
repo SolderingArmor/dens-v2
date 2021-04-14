@@ -10,8 +10,16 @@ here
 # Manual deployment
 
 Please check `tests/manual_deployment.py` example.
+Requirements: `ton-client-py` python library.
+
+```
+cd tests
+./manual_deployment.py
+```
 
 # Running the tests
+
+Requirements: `ton-client-py` python library.
 
 ```
 cd tests
