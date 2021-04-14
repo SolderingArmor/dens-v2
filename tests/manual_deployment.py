@@ -17,7 +17,7 @@ freeton_utils.asyncClient = TonClient(config=ClientConfig(network=NetworkConfig(
 domain = DnsRecord(name="freeton")
 
 # Create a Multisig class with a random keypair
-msig   = Multisig(signer=loadSigner(keysFile="msig.json"))
+msig   = Multisig()
 
 # If you want Multisig with a keypair from file, use this syntax:
 #msig = Multisig(signer=loadSigner(keysFile="msig.json"))
