@@ -64,7 +64,7 @@ abstract contract DnsRecordBase is IDnsRecord
     function getOwnerID()              external view override returns (uint256   ) {    return _whoisInfo.ownerID;                      }
     function getDtLastProlongation()   external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
     function getDtExpires()            external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
-    function getSubdomainRegPrice()    external view override returns (uint128   ) {    return _whoisInfo.subdomainRegPrice;            }
+    function getRegistrationPrice()    external view override returns (uint128   ) {    return _whoisInfo.registrationPrice;            }
     function getRegistrationType()     external view override returns (REG_TYPE  ) {    return _whoisInfo.registrationType;             }
     function getLastRegResult()        external view override returns (REG_RESULT) {    return _whoisInfo.lastRegResult;                }
     function getComment()              external view override returns (string    ) {    return _whoisInfo.comment;                      }
@@ -126,11 +126,11 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeSubdomainRegPrice(uint128 price) external override onlyOwner notExpired
+    function changeRegistrationPrice(uint128 newPrice) external override onlyOwner notExpired
     {
         if(msg.pubkey() != 0) { tvm.accept(); }
 
-        _whoisInfo.subdomainRegPrice = price;
+        _whoisInfo.registrationPrice = newPrice;
 
         if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
     }

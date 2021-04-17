@@ -117,13 +117,13 @@ contract DnsRecord is DnsRecordBase
 
         //========================================
         // REG_TYPE.MONEY has a custom flow;
-        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value >= _whoisInfo.subdomainRegPrice)
+        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value >= _whoisInfo.registrationPrice)
         {
-            tvm.rawReserve(address(this).balance - msg.value + _whoisInfo.subdomainRegPrice, 0);
+            tvm.rawReserve(address(this).balance - msg.value + _whoisInfo.registrationPrice, 0);
 
             _whoisInfo.subdomainRegAccepted += 1;
-            _whoisInfo.totalFeesCollected   += _whoisInfo.subdomainRegPrice;
-            emit newSubdomainRegistered(now, domainName, _whoisInfo.subdomainRegPrice);
+            _whoisInfo.totalFeesCollected   += _whoisInfo.registrationPrice;
+            emit newSubdomainRegistered(now, domainName, _whoisInfo.registrationPrice);
             
             return{value: 0, flag: 128}(REG_RESULT.APPROVED, ownerID, payerAddress); // we don't return ANY change in this case
         }

@@ -37,7 +37,7 @@ struct DnsWhois
     uint256    ownerID;             //
     uint32     dtLastProlongation;  //
     uint32     dtExpires;           //
-    uint128    subdomainRegPrice;   // 
+    uint128    registrationPrice;   // 
     REG_TYPE   registrationType;    //
     REG_RESULT lastRegResult;       //
     string     comment;             //
@@ -77,7 +77,7 @@ interface IDnsRecord
     function getOwnerID()              external view returns (uint256   );
     function getDtLastProlongation()   external view returns (uint32    );
     function getDtExpires()            external view returns (uint32    );
-    function getSubdomainRegPrice()    external view returns (uint128   );
+    function getRegistrationPrice()    external view returns (uint128   );
     function getRegistrationType()     external view returns (REG_TYPE  );
     function getLastRegResult()        external view returns (REG_RESULT);
     function getComment()              external view returns (string    );
@@ -164,9 +164,9 @@ interface IDnsRecord
 
     /// @notice Change sub-domain registration price;
     ///
-    /// @param price - new registration price;
+    /// @param newPrice - new registration price;
     //
-    function changeSubdomainRegPrice(uint128 price) external;
+    function changeRegistrationPrice(uint128 newPrice) external;
     
     //========================================
     // Misc

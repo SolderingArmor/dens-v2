@@ -8,7 +8,7 @@ import unittest
 import time
 import sys
 from   pprint import pprint
-from   contract_DnsRecord import DnsRecord
+from   contract_DnsRecordTEST import DnsRecordTEST
 
 TON = 1000000000
 
@@ -56,7 +56,7 @@ def _getExitCode(msgIdArray):
 class Test_01_SameNameDeploy(unittest.TestCase):
 
     #signer = generateSigner()
-    domain = DnsRecord(name = "org")
+    domain = DnsRecordTEST(name = "org")
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -85,7 +85,7 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 #
 class Test_02_DeployWithMultisigOwner(unittest.TestCase):
     
-    domain = DnsRecord(name = "net")
+    domain = DnsRecordTEST(name = "net")
     msig   = Multisig()
     
     def test_0(self):
@@ -128,18 +128,18 @@ class Test_02_DeployWithMultisigOwner(unittest.TestCase):
 class Test_03_WrongNames(unittest.TestCase):
     
     domainDictList = [
-        {"CODE": 0,   "DOMAIN": DnsRecord(name = "org-org")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "ORG")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "F@!#ING")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "ddd//dd")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "//")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "under_score")},
-        {"CODE": 0,   "DOMAIN": DnsRecord(name = "good-domain-name-with-31-letter")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "perfectly000fine000domain000name000with63letters000inside000kek")},
-        {"CODE": 0,   "DOMAIN": DnsRecord(name = "one/two/three/four")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "one/two/three/four/five")},
-        {"CODE": 200, "DOMAIN": DnsRecord(name = "too000long000domain000name000with64letters000inside000kekekelolz")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "org-org")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ORG")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "F@!#ING")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ddd//dd")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "//")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "under_score")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "good-domain-name-with-31-letter")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "perfectly000fine000domain000name000with63letters000inside000kek")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "one/two/three/four")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "one/two/three/four/five")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "too000long000domain000name000with64letters000inside000kekekelolz")},
     ]
 
     def test_0(self):
@@ -167,7 +167,7 @@ class Test_03_WrongNames(unittest.TestCase):
 #
 class Test_04_Prolongate(unittest.TestCase):
     
-    domain = DnsRecord(name = "net")
+    domain = DnsRecordTEST(name = "net")
     msig   = Multisig()
 
 
@@ -237,8 +237,8 @@ class Test_04_Prolongate(unittest.TestCase):
 #
 class Test_05_ClaimFFA(unittest.TestCase):
     
-    domain_net     = DnsRecord(name="net")
-    domain_net_kek = DnsRecord(name="net/kek")
+    domain_net     = DnsRecordTEST(name="net")
+    domain_net_kek = DnsRecordTEST(name="net/kek")
     msig1          = Multisig()
     msig2          = Multisig()
 
@@ -307,8 +307,8 @@ class Test_05_ClaimFFA(unittest.TestCase):
 # 
 class Test_06_ClaimMoney(unittest.TestCase):
 
-    domain_domaino     = DnsRecord(name="domaino")
-    domain_domaino_kek = DnsRecord(name="domaino/kek")
+    domain_domaino     = DnsRecordTEST(name="domaino")
+    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
     msig1              = Multisig()
     msig2              = Multisig()
     
@@ -345,7 +345,7 @@ class Test_06_ClaimMoney(unittest.TestCase):
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeSubdomainRegPrice", functionParams={"price":regPrice}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationPrice", functionParams={"newPrice":regPrice}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         #
@@ -387,8 +387,8 @@ class Test_06_ClaimMoney(unittest.TestCase):
 # 
 class Test_07_ClaimOwner(unittest.TestCase):
 
-    domain_domaino     = DnsRecord(name="domaino")
-    domain_domaino_kek = DnsRecord(name="domaino/kek")
+    domain_domaino     = DnsRecordTEST(name="domaino")
+    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
     msig1              = Multisig()
     msig2              = Multisig()
     
@@ -462,8 +462,8 @@ class Test_07_ClaimOwner(unittest.TestCase):
 # 
 class Test_08_ClaimDeny(unittest.TestCase):       
 
-    domain_net     = DnsRecord(name="net")
-    domain_net_kek = DnsRecord(name="net/kek")
+    domain_net     = DnsRecordTEST(name="net")
+    domain_net_kek = DnsRecordTEST(name="net/kek")
     msig1          = Multisig()
     msig2          = Multisig()
 
@@ -538,7 +538,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
 # 
 class Test_09_RegisterWithNoParent(unittest.TestCase):
 
-    domain = DnsRecord(name="net/some/shit")
+    domain = DnsRecordTEST(name="net/some/shit")
     msig   = Multisig()
 
     def test_0(self):
@@ -587,8 +587,8 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
 # 
 class Test_10_CheckWhoisStatistics(unittest.TestCase):       
 
-    domain_domaino     = DnsRecord(name="domaino")
-    domain_domaino_kek = DnsRecord(name="domaino/kek")
+    domain_domaino     = DnsRecordTEST(name="domaino")
+    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
     msig1              = Multisig()
     msig2              = Multisig()
     
@@ -659,7 +659,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeSubdomainRegPrice", functionParams={"price":price}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationPrice", functionParams={"newPrice":price}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         # We try to include less money than price
@@ -700,7 +700,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 # 
 class Test_11_ChangeWhois(unittest.TestCase):   
     
-    domain = DnsRecord(name="domaino")
+    domain = DnsRecordTEST(name="domaino")
     msig   = Multisig()
     
     def test_0(self):
@@ -748,7 +748,7 @@ class Test_11_ChangeWhois(unittest.TestCase):
 # 
 class Test_12_ReleaseDomain(unittest.TestCase): 
     
-    domain = DnsRecord(name="dominos")
+    domain = DnsRecordTEST(name="dominos")
     msig   = Multisig()
     
     def test_0(self):
@@ -795,7 +795,7 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 # 
 class Test_13_WithdrawBalance(unittest.TestCase):
     
-    domain = DnsRecord(name="dominos")
+    domain = DnsRecordTEST(name="dominos")
     msig   = Multisig()
     
     def test_0(self):
@@ -856,7 +856,7 @@ class Test_13_WithdrawBalance(unittest.TestCase):
 # 
 class Test_14_ClaimAlreadyClaimed(unittest.TestCase):       
 
-    domain = DnsRecord(name="domaino")
+    domain = DnsRecordTEST(name="domaino")
     msig1  = Multisig()
     msig2  = Multisig()
     

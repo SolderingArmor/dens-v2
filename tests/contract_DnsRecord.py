@@ -8,8 +8,8 @@ from   freeton_utils import *
 class DnsRecord(object):
     def __init__(self, name: str, signer: Signer = None):
         self.SIGNER      = generateSigner() if signer is None else signer
-        self.ABI         = "../bin/DnsRecordTEST.abi.json"
-        self.TVC         = "../bin/DnsRecordTEST.tvc"
+        self.ABI         = "../bin/DnsRecord.abi.json"
+        self.TVC         = "../bin/DnsRecord.tvc"
         self.CODE        = getCodeFromTvc(self.TVC)
         self.CONSTRUCTOR = {}
         self.INITDATA    = {"_domainName":stringToHex(name),"_domainCode": self.CODE}

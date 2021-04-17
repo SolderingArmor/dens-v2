@@ -81,7 +81,7 @@
 				{"name":"_answer_id","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerID","type":"uint256"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"subdomainRegPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
+				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerID","type":"uint256"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
 			]
 		},
 		{
@@ -89,7 +89,7 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerID","type":"uint256"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"subdomainRegPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
+				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerID","type":"uint256"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
 			]
 		},
 		{
@@ -165,7 +165,7 @@
 			]
 		},
 		{
-			"name": "getSubdomainRegPrice",
+			"name": "getRegistrationPrice",
 			"inputs": [
 			],
 			"outputs": [
@@ -286,9 +286,9 @@
 			]
 		},
 		{
-			"name": "changeSubdomainRegPrice",
+			"name": "changeRegistrationPrice",
 			"inputs": [
-				{"name":"price","type":"uint128"}
+				{"name":"newPrice","type":"uint128"}
 			],
 			"outputs": [
 			]

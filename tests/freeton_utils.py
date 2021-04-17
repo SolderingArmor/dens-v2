@@ -196,6 +196,8 @@ def runFunction(abiPath, contractAddress, functionName, functionParams):
     result       = getAccountGraphQL(contractAddress, "boc")
     if result == "":
         return ""
+    if result["boc"] is None:
+        return ""
 
     boc          = result["boc"]
     abi          = getAbi(abiPath)
