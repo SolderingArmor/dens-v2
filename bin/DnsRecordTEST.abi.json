@@ -286,14 +286,6 @@
 			]
 		},
 		{
-			"name": "changeMinimumBalance",
-			"inputs": [
-				{"name":"newMinimumBalance","type":"uint128"}
-			],
-			"outputs": [
-			]
-		},
-		{
 			"name": "changeOwner",
 			"inputs": [
 				{"name":"newOwnerAddress","type":"address"}

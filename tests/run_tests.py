@@ -55,7 +55,6 @@ def _getExitCode(msgIdArray):
 # 
 class Test_01_SameNameDeploy(unittest.TestCase):
 
-    #signer = generateSigner()
     domain = DnsRecordTEST(name = "org")
     msig   = SetcodeMultisig()
     

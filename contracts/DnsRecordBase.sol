@@ -17,7 +17,6 @@ abstract contract DnsRecordBase is IDnsRecord
     uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
     uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
 
-    uint128 constant MIN_BALANCE           = 0.1 ton;
     uint32  constant MAX_SEGMENTS_NUMBER   = 4;
     uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
     uint32  constant MIN_SEGMENTS_LENGTH   = 2;
@@ -47,7 +46,6 @@ abstract contract DnsRecordBase is IDnsRecord
     // Variables
     string   internal static _domainName;
     bool     internal        _nameIsValid;
-    uint128  internal        _minimumBalance; // minimum balance to maintain
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
 
@@ -77,7 +75,7 @@ abstract contract DnsRecordBase is IDnsRecord
     function getSubdomainRegAccepted() external view override returns (uint32    ) {    return _whoisInfo.subdomainRegAccepted;         }
     function getSubdomainRegDenied()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegDenied;           }
     function getTotalFeesCollected()   external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
-    function getMinimumBalance()       external view override returns (uint128   ) {    return _minimumBalance;                         }
+    //function getMinimumBalance()       public   view override returns (uint128   ) {    return gasToValue(500000, 0);                   }
     //
     function canProlongate()           public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
                                                                                                 now >= _whoisInfo.dtExpires - tenDays); }
@@ -87,9 +85,15 @@ abstract contract DnsRecordBase is IDnsRecord
     //
     function _reserve() internal view
     {
-        require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
+        uint128 balance = gasToValue(500000, 0);
+        require(address(this).balance > balance, ERROR_NOT_ENOUGH_MONEY);
         // Reserve exactly minimum balance;
-        tvm.rawReserve(_minimumBalance, 0);
+        tvm.rawReserve(balance, 0);
+
+
+        /*require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
+        // Reserve exactly minimum balance;
+        tvm.rawReserve(_minimumBalance, 0);*/
     }
 
     //========================================
@@ -132,22 +136,13 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeMinimumBalance(uint128 newMinimumBalance) external override onlyOwner notExpired
-    {
-        _reserve();
-        _minimumBalance = newMinimumBalance;
-        msg.sender.transfer(0, false, 128);
-    }
-
-    //========================================
-    //
     function _changeOwner(address newOwnerAddress) internal
     {
-        _whoisInfo.ownerAddress     = newOwnerAddress; //
-        _whoisInfo.endpointAddress  = addressZero;     //
-        _whoisInfo.registrationType = REG_TYPE.DENY;   // prevent unwanted subdomains from registering by accident right after domain modification;
-        _whoisInfo.comment          = "";              //
-        _minimumBalance             = MIN_BALANCE;     // reset minimum balance in case prevoius owner set a high value
+        _whoisInfo.ownerAddress      = newOwnerAddress; //
+        _whoisInfo.endpointAddress   = addressZero;     //
+        _whoisInfo.registrationType  = REG_TYPE.DENY;   // prevent unwanted subdomains from registering by accident right after domain modification;
+        _whoisInfo.registrationPrice = 0;               //
+        _whoisInfo.comment           = "";              //
     }
 
     function changeOwner(address newOwnerAddress) external override onlyOwner notExpired

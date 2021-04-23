@@ -88,7 +88,6 @@ interface IDnsRecord
     function getSubdomainRegAccepted() external view returns (uint32    );
     function getSubdomainRegDenied()   external view returns (uint32    );
     function getTotalFeesCollected()   external view returns (uint128   );
-    function getMinimumBalance()       external view returns (uint128   );
     //
     function canProlongate()           external view returns (bool      );
     function isExpired()               external view returns (bool      );
@@ -131,12 +130,6 @@ interface IDnsRecord
     /// @param newComment - new comment;
     //
     function changeComment(string newComment) external;
-
-    /// @notice Change minimum balance this contract needs to maintain;
-    ///
-    /// @param newMinimumBalance - new registration price;
-    //
-    function changeMinimumBalance(uint128 newMinimumBalance) external;
 
     //========================================
     // Registration

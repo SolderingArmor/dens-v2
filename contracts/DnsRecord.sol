@@ -44,7 +44,6 @@ contract DnsRecord is DnsRecordBase
 
         _nameIsValid = _validateDomainName(_domainName);
         require(_nameIsValid, ERROR_DOMAIN_NAME_NOT_VALID);
-        _minimumBalance = MIN_BALANCE;
 
        (string[] segments, string parentName) = _parseDomainName(_domainName);
         _whoisInfo.segmentsCount              = uint8(segments.length);
