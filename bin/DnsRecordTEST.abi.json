@@ -230,14 +230,6 @@
 			]
 		},
 		{
-			"name": "getMinimumBalance",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint128"}
-			]
-		},
-		{
 			"name": "canProlongate",
 			"inputs": [
 			],
