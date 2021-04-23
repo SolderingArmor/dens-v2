@@ -19,8 +19,6 @@ from datetime import datetime
 
 # ==============================================================================
 # 
-#clientConfig  = ClientConfig()
-#clientConfig.network.server_address = "https://net.ton.dev"
 asyncClient   = TonClient(config=ClientConfig(network=NetworkConfig(server_address="https://net.ton.dev")))
 ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
 ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
