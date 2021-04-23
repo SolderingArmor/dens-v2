@@ -16,7 +16,8 @@ abstract contract DnsRecordBase is IDnsRecord
     address constant addressZero = address.makeAddrStd(0, 0); //
     uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
     uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
-    
+
+    uint128 constant MIN_BALANCE           = 0.1 ton;
     uint32  constant MAX_SEGMENTS_NUMBER   = 4;
     uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
     uint32  constant MIN_SEGMENTS_LENGTH   = 2;
@@ -84,6 +85,15 @@ abstract contract DnsRecordBase is IDnsRecord
     
     //========================================
     //
+    function _reserve() internal view
+    {
+        require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
+        // Reserve exactly minimum balance;
+        tvm.rawReserve(_minimumBalance, 0);
+    }
+
+    //========================================
+    //
     function changeEndpointAddress(address newAddress) external override onlyOwner notExpired
     {
         _reserve();
@@ -104,19 +114,19 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     //
-    function changeComment(string newComment) external override onlyOwner notExpired
+    function changeRegistrationPrice(uint128 newPrice) external override onlyOwner notExpired
     {
         _reserve();
-        _whoisInfo.comment = newComment;
+        _whoisInfo.registrationPrice = newPrice;
         msg.sender.transfer(0, false, 128);
     }
 
     //========================================
     //
-    function changeRegistrationPrice(uint128 newPrice) external override onlyOwner notExpired
+    function changeComment(string newComment) external override onlyOwner notExpired
     {
         _reserve();
-        _whoisInfo.registrationPrice = newPrice;
+        _whoisInfo.comment = newComment;
         msg.sender.transfer(0, false, 128);
     }
 
@@ -137,7 +147,7 @@ abstract contract DnsRecordBase is IDnsRecord
         _whoisInfo.endpointAddress  = addressZero;     //
         _whoisInfo.registrationType = REG_TYPE.DENY;   // prevent unwanted subdomains from registering by accident right after domain modification;
         _whoisInfo.comment          = "";              //
-        _minimumBalance             = 0.5 ton;         // reset minimum balance in case prevoius owner set a high value
+        _minimumBalance             = MIN_BALANCE;     // reset minimum balance in case prevoius owner set a high value
     }
 
     function changeOwner(address newOwnerAddress) external override onlyOwner notExpired
@@ -164,6 +174,9 @@ abstract contract DnsRecordBase is IDnsRecord
         
         _reserve();
         _whoisInfo.dtExpires += ninetyDays;
+
+        emit domainProlongated(now, _whoisInfo.dtExpires);
+
         msg.sender.transfer(0, false, 128);
     }
 
@@ -181,15 +194,6 @@ abstract contract DnsRecordBase is IDnsRecord
         emit domainReleased(now);
         
         msg.sender.transfer(0, false, 128);
-    }
-
-    //========================================
-    //
-    function _reserve() internal view 
-    {
-        require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
-        // Reserve exactly minimum balance;
-        tvm.rawReserve(_minimumBalance, 0);
     }
 
     //========================================

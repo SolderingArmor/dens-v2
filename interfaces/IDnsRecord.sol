@@ -9,7 +9,7 @@ enum REG_TYPE
 {
     FFA,     // Free For All, anyone can register a subdomain;
     MONEY,   // Registration is like FFA BUT you need to attach enough money (configurable by parent domain);
-    OWNER,   // Only owner can register a subdomain, all other request are denied;
+    OWNER,   // Only owner can register a subdomain (thus be an owner of a subdomain, unless he transfers ownership manually), all other request are denied;
     DENY,    // All requests are denied;
     NUM
 }
@@ -18,8 +18,8 @@ enum REG_RESULT
 {
     NONE,             // 
     APPROVED,         // Cool;
-    DENIED,           // Root domain denies the registration (either automatically or manually), try again later;
-    NOT_ENOUGH_MONEY, // Root domain requires more money to send;
+    DENIED,           // Root domain denies the registration, fulfill registration requirements and try again;
+    NOT_ENOUGH_MONEY, // Not enough money attached to "claimExpired" message;
     NUM
 }
 
@@ -59,6 +59,7 @@ interface IDnsRecord
     // Events
     event newSubdomainRegistered(uint32 dt, string domainName, uint128 price       );
     event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress);
+    event domainProlongated     (uint32 dt, uint32 expirationDate);
     event domainReleased        (uint32 dt);
 
     //========================================
@@ -106,9 +107,9 @@ interface IDnsRecord
     function changeEndpointAddress(address newAddress) external;
     
     /// @notice Change the owner;
-    ///         Resets some DNS values like endpointAddress and comment;
+    ///         Resets some DNS values like endpointAddress, registrationType, comment, etc.;
     ///
-    /// @param newOwnerAddress - address of a new owner; CAN NOT be (0, 0);
+    /// @param newOwnerAddress - address of a new owner; CAN'T be (0, 0);
     //
     function changeOwner(address newOwnerAddress) external;
     
@@ -118,12 +119,24 @@ interface IDnsRecord
     //
     function changeRegistrationType(REG_TYPE newType) external;
 
+    /// @notice Change sub-domain registration price;
+    ///
+    /// @param newPrice - new registration price;
+    //
+    function changeRegistrationPrice(uint128 newPrice) external;
+
     /// @notice Change comment;
     ///         Keep in mind that you will have to pay larger storage fees for huge comments;
     ///
     /// @param newComment - new comment;
     //
     function changeComment(string newComment) external;
+
+    /// @notice Change minimum balance this contract needs to maintain;
+    ///
+    /// @param newMinimumBalance - new registration price;
+    //
+    function changeMinimumBalance(uint128 newMinimumBalance) external;
 
     //========================================
     // Registration
@@ -157,23 +170,6 @@ interface IDnsRecord
     /// @param result - registration result;
     //
     function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, address payerAddress) external;
-
-    //========================================
-    // Sub-domain management
-
-    /// @notice Change sub-domain registration price;
-    ///
-    /// @param newPrice - new registration price;
-    //
-    function changeRegistrationPrice(uint128 newPrice) external;
-    
-    //========================================
-    // 
-    /// @notice Change minimum balance this contract needs to maintain;
-    ///
-    /// @param newMinimumBalance - new registration price;
-    //
-    function changeMinimumBalance(uint128 newMinimumBalance) external;
 }
 
 //================================================================================

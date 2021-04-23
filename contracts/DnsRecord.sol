@@ -36,12 +36,15 @@ contract DnsRecord is DnsRecordBase
         require(ownerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
 
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
+        // if the deployment is done by internal message, tvm.accept() is not needed, but if
+        // deployment is via external message, can't help it;
+        //
         // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;        
         tvm.accept();
 
         _nameIsValid = _validateDomainName(_domainName);
         require(_nameIsValid, ERROR_DOMAIN_NAME_NOT_VALID);
-        _minimumBalance = 0.5 ton;
+        _minimumBalance = MIN_BALANCE;
 
        (string[] segments, string parentName) = _parseDomainName(_domainName);
         _whoisInfo.segmentsCount              = uint8(segments.length);
@@ -54,6 +57,8 @@ contract DnsRecord is DnsRecordBase
         
         // Registering a new domain is the same as claiming the expired from this point:
         _claimExpired(ownerAddress);
+
+        // TODO: do we need to call regular "claimExpired" if it's an internal message with value?
 
         // Return the change adter contructor is done;
         _reserve();
@@ -77,6 +82,8 @@ contract DnsRecord is DnsRecordBase
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero && msg.value > 0, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
 
+        _reserve();
+
         // reset ownership first
         _changeOwner(addressZero);
         _claimExpired(newOwnerAddress);
@@ -91,7 +98,7 @@ contract DnsRecord is DnsRecordBase
     //
     function _sendRegistrationRequest(address newOwnerAddress) internal view
     {
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 64}(_domainName, newOwnerAddress, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 128}(_domainName, newOwnerAddress, msg.sender);
     }
     
     //========================================
@@ -99,13 +106,18 @@ contract DnsRecord is DnsRecordBase
     function receiveRegistrationRequest(string domainName, address ownerAddress, address payerAddress) external responsible override returns (REG_RESULT, address, address)
     {
         //========================================
-        // 1. Check if it is really my subdomain;
+        // 0. Sanity; We don't want to go out of gas because someone sent jibberish;
+        require(domainName.byteLength() >= MIN_SEGMENTS_LENGTH && domainName.byteLength() <= MAX_DOMAIN_LENGTH, ERROR_DOMAIN_NAME_NOT_VALID);
+
+        //========================================
+        // 1. Check if the request came from domain itself; cheaper than parsing, so, it goes first;
+        (address addr, ) = calculateDomainAddress(domainName);
+        require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
+
+        // 2. Check if it is really my subdomain;
         (, string parentName) = _parseDomainName(domainName);
         require(parentName == _whoisInfo.domainName, ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN);
 
-        // 2. Check if the request came from domain itself;
-        (address addr, ) = calculateDomainAddress(domainName);
-        require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
 
         //========================================
         // 3. Reserve minimum balance;
@@ -135,7 +147,7 @@ contract DnsRecord is DnsRecordBase
             result = (ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED);
         }
 
-        // Statistics
+        // Common statistics
         if(result == REG_RESULT.APPROVED)
         {
             // 1.

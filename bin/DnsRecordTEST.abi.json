@@ -270,17 +270,17 @@
 			]
 		},
 		{
-			"name": "changeComment",
+			"name": "changeRegistrationPrice",
 			"inputs": [
-				{"name":"newComment","type":"bytes"}
+				{"name":"newPrice","type":"uint128"}
 			],
 			"outputs": [
 			]
 		},
 		{
-			"name": "changeRegistrationPrice",
+			"name": "changeComment",
 			"inputs": [
-				{"name":"newPrice","type":"uint128"}
+				{"name":"newComment","type":"bytes"}
 			],
 			"outputs": [
 			]
@@ -337,6 +337,15 @@
 				{"name":"dt","type":"uint32"},
 				{"name":"result","type":"uint8"},
 				{"name":"ownerAddress","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "domainProlongated",
+			"inputs": [
+				{"name":"dt","type":"uint32"},
+				{"name":"expirationDate","type":"uint32"}
 			],
 			"outputs": [
 			]
