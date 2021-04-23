@@ -34,4 +34,4 @@ Possible arguments:
 
 `--throw` - by default tests will suppress all the errors and get only error codes from them, because for some tests getting an error code is actually a successfull execution. If you want to force and see errors as-is, use this flag;
 
-`--msig-giver=000.json` - use Multisig instead of `TON OS SE` giver;
+`--msig-giver=000.json` - use SetcodeMultisig instead of `TON OS SE` giver;

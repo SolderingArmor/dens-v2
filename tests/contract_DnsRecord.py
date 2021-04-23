@@ -16,8 +16,8 @@ class DnsRecord(object):
         self.PUBKEY      = ZERO_PUBKEY
         self.ADDRESS     = getAddressZeroPubkey(abiPath=self.ABI, tvcPath=self.TVC, initialData=self.INITDATA)
 
-    def deploy(self, ownerID: str):
-        self.CONSTRUCTOR = {"ownerID": ownerID}
+    def deploy(self, ownerAddress: str):
+        self.CONSTRUCTOR = {"ownerAddress": ownerAddress}
         result = deployContract(abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
         return result
 
@@ -25,7 +25,7 @@ class DnsRecord(object):
         result = callFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=signer)
         return result
 
-    def callFromMultisig(self, msig: Multisig, functionName, functionParams, value, flags):
+    def callFromMultisig(self, msig: SetcodeMultisig, functionName, functionParams, value, flags):
         messageBoc = prepareMessageBoc(abiPath=self.ABI, functionName=functionName, functionParams=functionParams)
         result     = msig.callTransfer(addressDest=self.ADDRESS, value=value, payload=messageBoc, flags=flags)
         return result

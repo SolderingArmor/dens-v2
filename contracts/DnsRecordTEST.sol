@@ -31,14 +31,17 @@ contract DnsRecord is DnsRecordBase
     //
     /// @dev we still need address and pubkey here in constructor, because root level domains are registerd right away;
     //
-    constructor(uint256 ownerID) public 
+    constructor(address ownerAddress) public
     {
+        require(ownerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
+
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
         // Be sure that you use a valid "_domainName", otherwise you will loose your Crystals;        
         tvm.accept();
 
         _nameIsValid = _validateDomainName(_domainName);
         require(_nameIsValid, ERROR_DOMAIN_NAME_NOT_VALID);
+        _minimumBalance = 0.5 ton;
 
        (string[] segments, string parentName) = _parseDomainName(_domainName);
         _whoisInfo.segmentsCount              = uint8(segments.length);
@@ -50,61 +53,50 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.dtExpires                  = 0; // sanity
         
         // Registering a new domain is the same as claiming the expired from this point:
-        _claimExpired(ownerID);
+        _claimExpired(ownerAddress);
+
+        // Return the change adter contructor is done;
+        _reserve();
+        address returnAddress = (msg.sender == addressZero ? ownerAddress : msg.sender);
+        returnAddress.transfer(0, false, 128);
     }
 
     //========================================
     //
-    /// @dev dangerous function;
-    //
-    function releaseDomain() external override onlyOwner notExpired
-    {
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
-        _changeOwner(0);  
-        _whoisInfo.dtExpires = 0;
-
-        emit domainReleased(now);
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
-    }
-
-    //========================================
-    //
-    function _claimExpired(uint256 newOwnerID) internal 
+    function _claimExpired(address newOwnerAddress) internal
     {
         // if it is a ROOT domain name
         if(_whoisInfo.segmentsCount == 1) 
         {
             // Root domains won't need approval, internal callback right away
-            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerID);
+            _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerAddress);
         }
     }
     
-    function claimExpired(uint256 newOwnerID) public override Expired NameIsValid
+    function claimExpired(address newOwnerAddress) public override Expired NameIsValid
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero && msg.value > 0, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
 
         // reset ownership first
-        _changeOwner(0);        
-        _claimExpired(newOwnerID);
+        _changeOwner(addressZero);
+        _claimExpired(newOwnerAddress);
 
         if(_whoisInfo.segmentsCount > 1)
         {
-            _sendRegistrationRequest(newOwnerID);
+            _sendRegistrationRequest(newOwnerAddress);
         }
     }
 
     //========================================
     //
-    function _sendRegistrationRequest(uint256 newOwnerID) internal view
+    function _sendRegistrationRequest(address newOwnerAddress) internal view
     {
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 64}(_domainName, newOwnerID, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 64}(_domainName, newOwnerAddress, msg.sender);
     }
     
     //========================================
     //
-    function receiveRegistrationRequest(string domainName, uint256 ownerID, address payerAddress) external responsible override returns (REG_RESULT, uint256, address)
+    function receiveRegistrationRequest(string domainName, address ownerAddress, address payerAddress) external responsible override returns (REG_RESULT, address, address)
     {
         //========================================
         // 1. Check if it is really my subdomain;
@@ -116,17 +108,8 @@ contract DnsRecord is DnsRecordBase
         require(addr == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_VALID);
 
         //========================================
-        // REG_TYPE.MONEY has a custom flow;
-        if(_whoisInfo.registrationType == REG_TYPE.MONEY && msg.value >= _whoisInfo.registrationPrice)
-        {
-            tvm.rawReserve(address(this).balance - msg.value + _whoisInfo.registrationPrice, 0);
-
-            _whoisInfo.subdomainRegAccepted += 1;
-            _whoisInfo.totalFeesCollected   += _whoisInfo.registrationPrice;
-            emit newSubdomainRegistered(now, domainName, _whoisInfo.registrationPrice);
-            
-            return{value: 0, flag: 128}(REG_RESULT.APPROVED, ownerID, payerAddress); // we don't return ANY change in this case
-        }
+        // 3. Reserve minimum balance;
+        _reserve();
 
         //========================================
         // General flow;
@@ -135,12 +118,20 @@ contract DnsRecord is DnsRecordBase
         else if(_whoisInfo.registrationType == REG_TYPE.DENY)   {    result = REG_RESULT.DENIED;      }
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
-            // If we are here that means "REG_TYPE.MONEY" custom flow was unsuccessful;
-            result = REG_RESULT.NOT_ENOUGH_MONEY;
+            if(msg.value > _whoisInfo.registrationPrice)
+            {
+                address(_whoisInfo.ownerAddress).transfer(_whoisInfo.registrationPrice, false, 1);
+                _whoisInfo.totalFeesCollected += _whoisInfo.registrationPrice;
+                result = REG_RESULT.APPROVED;
+            }
+            else
+            {
+                result = REG_RESULT.NOT_ENOUGH_MONEY;
+            }
         }
         else if(_whoisInfo.registrationType == REG_TYPE.OWNER)
         {
-            bool ownerCalled = (ownerID == _whoisInfo.ownerID);
+            bool ownerCalled = (ownerAddress == _whoisInfo.ownerAddress);
             result = (ownerCalled ? REG_RESULT.APPROVED : REG_RESULT.DENIED);
         }
 
@@ -156,38 +147,35 @@ contract DnsRecord is DnsRecordBase
             _whoisInfo.subdomainRegDenied += 1;
         }
 
-        // Return the change; guarantee that we don't spend any TONs on this account (ecxept storage fees)
-        tvm.rawReserve(address(this).balance - msg.value, 0);
-        return{value: 0, flag: 128}(result, ownerID, payerAddress);
+        return{value: 0, flag: 128}(result, ownerAddress, payerAddress);
     }
     
     //========================================
     //
-    function _callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID) internal
+    function _callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress) internal
     {
-        emit registrationResult(now, result, ownerID);
+        emit registrationResult(now, result, ownerAddress);
         _whoisInfo.lastRegResult = result;
         
         if(result == REG_RESULT.APPROVED)
         {
-            _whoisInfo.ownerID         = ownerID;
+            _whoisInfo.ownerAddress    = ownerAddress;
             _whoisInfo.dtExpires       = (now + ninetyDays);
             _whoisInfo.totalOwnersNum += 1;
         }
         else if(result == REG_RESULT.DENIED || result == REG_RESULT.NOT_ENOUGH_MONEY)
         {
             // Domain ownership is reset
-            _whoisInfo.ownerID   = 0;
-            _whoisInfo.dtExpires = 0;
+            _whoisInfo.ownerAddress = addressZero;
+            _whoisInfo.dtExpires    = 0;
         }
     }
 
     //========================================
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external override onlyRoot
+    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, address payerAddress) external override onlyRoot
     {
-        // Guarantee the acceptance of the result
-        tvm.accept();
+        _reserve();
 
         // We can't move this to a modifier because if it's there parent domain will get a Bounce message back with all the
         // TONs that need to be returned to original caller;
@@ -195,14 +183,11 @@ contract DnsRecord is DnsRecordBase
         // NOTE: but "onlyRoot" is still a modifier, because if anyone else is sending us a message, we should Bounce it;
         if(isExpired())
         {
-            _callbackOnRegistrationRequest(result, ownerID);
+            _callbackOnRegistrationRequest(result, ownerAddress);
         }
 
-        // return change to payer if applicable
-        if(msg.value > 0 && payerAddress != addressZero)
-        {
-            payerAddress.transfer(0, true, 64);
-        }
+        // Return all remaining change to payer;
+        payerAddress.transfer(0, false, 128);
     }
 
     //========================================

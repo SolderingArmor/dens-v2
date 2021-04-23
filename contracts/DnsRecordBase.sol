@@ -27,8 +27,7 @@ abstract contract DnsRecordBase is IDnsRecord
     // Error codes
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER      = 100;
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT       = 101;
-    uint constant ERROR_EITHER_ADDRESS_OR_PUBKEY            = 102;
-    uint constant ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE = 103;
+    uint constant ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE = 102;
     uint constant ERROR_DOMAIN_NAME_NOT_VALID               = 200;
     uint constant ERROR_DOMAIN_IS_EXPIRED                   = 201;
     uint constant ERROR_DOMAIN_IS_NOT_EXPIRED               = 202;
@@ -40,11 +39,14 @@ abstract contract DnsRecordBase is IDnsRecord
     uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS   = 208;
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN  = 209;
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID         = 210;
+    uint constant ERROR_NOT_ENOUGH_MONEY                    = 211;
+    uint constant ERROR_ADDRESS_CAN_NOT_BE_EMPTY            = 212;
     
     //========================================
     // Variables
     string   internal static _domainName;
     bool     internal        _nameIsValid;
+    uint128  internal        _minimumBalance; // minimum balance to maintain
     TvmCell  internal static _domainCode;
     DnsWhois internal        _whoisInfo;
 
@@ -61,7 +63,7 @@ abstract contract DnsRecordBase is IDnsRecord
     function getParentDomainName()     external view override returns (string    ) {    return _whoisInfo.parentDomainName;             }
     function getParentDomainAddress()  external view override returns (address   ) {    return _whoisInfo.parentDomainAddress;          }    
     //
-    function getOwnerID()              external view override returns (uint256   ) {    return _whoisInfo.ownerID;                      }
+    function getOwnerAddress()         external view override returns (address   ) {    return _whoisInfo.ownerAddress;                 }
     function getDtLastProlongation()   external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
     function getDtExpires()            external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
     function getRegistrationPrice()    external view override returns (uint128   ) {    return _whoisInfo.registrationPrice;            }
@@ -74,90 +76,84 @@ abstract contract DnsRecordBase is IDnsRecord
     function getSubdomainRegAccepted() external view override returns (uint32    ) {    return _whoisInfo.subdomainRegAccepted;         }
     function getSubdomainRegDenied()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegDenied;           }
     function getTotalFeesCollected()   external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
+    function getMinimumBalance()       external view override returns (uint128   ) {    return _minimumBalance;                         }
     //
     function canProlongate()           public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
                                                                                                 now >= _whoisInfo.dtExpires - tenDays); }
     function isExpired()               public   view override returns (bool      ) {    return  now >  _whoisInfo.dtExpires;            }
-
-    //========================================
-    //
-    function withdrawBalance(uint128 amount, address dest) external override onlyOwner notExpired
-    {
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
-        dest.transfer(amount, false, 1);
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
-    }
     
     //========================================
     //
     function changeEndpointAddress(address newAddress) external override onlyOwner notExpired
     {
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
+        _reserve();
         _whoisInfo.endpointAddress = newAddress;
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+        msg.sender.transfer(0, false, 128);
     }
 
     //========================================
     //
     function changeRegistrationType(REG_TYPE newType) external override onlyOwner notExpired
     {
-        require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);        
-        if(msg.pubkey() != 0) { tvm.accept(); }
+        require(newType < REG_TYPE.NUM, ERROR_WRONG_REGISTRATION_TYPE);
 
+        _reserve();
         _whoisInfo.registrationType = newType;
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+        msg.sender.transfer(0, false, 128);
     }
 
     //========================================
     //
     function changeComment(string newComment) external override onlyOwner notExpired
     {
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
+        _reserve();
         _whoisInfo.comment = newComment;
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+        msg.sender.transfer(0, false, 128);
     }
 
     //========================================
     //
     function changeRegistrationPrice(uint128 newPrice) external override onlyOwner notExpired
     {
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
+        _reserve();
         _whoisInfo.registrationPrice = newPrice;
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+        msg.sender.transfer(0, false, 128);
     }
 
     //========================================
     //
-    function _changeOwner(uint256 newOwnerID) internal
+    function changeMinimumBalance(uint128 newMinimumBalance) external override onlyOwner notExpired
     {
-        _whoisInfo.ownerID          = newOwnerID;
-        _whoisInfo.endpointAddress  = addressZero;
-        _whoisInfo.registrationType = REG_TYPE.DENY; // prevent unwanted subdomains from registering by accident right after domain modification;
-        _whoisInfo.comment          = "";
+        _reserve();
+        _minimumBalance = newMinimumBalance;
+        msg.sender.transfer(0, false, 128);
     }
 
-    function changeOwner(uint256 newOwnerID) external override onlyOwner notExpired
+    //========================================
+    //
+    function _changeOwner(address newOwnerAddress) internal
     {
-        if(msg.pubkey() != 0) { tvm.accept(); }
+        _whoisInfo.ownerAddress     = newOwnerAddress; //
+        _whoisInfo.endpointAddress  = addressZero;     //
+        _whoisInfo.registrationType = REG_TYPE.DENY;   // prevent unwanted subdomains from registering by accident right after domain modification;
+        _whoisInfo.comment          = "";              //
+        _minimumBalance             = 0.5 ton;         // reset minimum balance in case prevoius owner set a high value
+    }
 
+    function changeOwner(address newOwnerAddress) external override onlyOwner notExpired
+    {
+        require(newOwnerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
+        
+        _reserve();
+        
         // Increase counter only if new owner is different
-        if(newOwnerID != _whoisInfo.ownerID)
+        if(newOwnerAddress != _whoisInfo.ownerAddress)
         {
             _whoisInfo.totalOwnersNum += 1;
         }
 
-        _changeOwner(newOwnerID);
-
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+        _changeOwner(newOwnerAddress);
+        msg.sender.transfer(0, false, 128);
     }
 
     //========================================
@@ -166,11 +162,34 @@ abstract contract DnsRecordBase is IDnsRecord
     {
         require(canProlongate(), ERROR_CAN_NOT_PROLONGATE_YET);
         
-        if(msg.pubkey() != 0) { tvm.accept(); }
-
+        _reserve();
         _whoisInfo.dtExpires += ninetyDays;
+        msg.sender.transfer(0, false, 128);
+    }
 
-        if(msg.value > 0) { msg.sender.transfer(0, true, 64); }
+    //========================================
+    //
+    /// @dev dangerous function;
+    //
+    function releaseDomain() external override onlyOwner notExpired
+    {
+        _reserve();
+
+        _changeOwner(addressZero);  
+        _whoisInfo.dtExpires = 0;
+
+        emit domainReleased(now);
+        
+        msg.sender.transfer(0, false, 128);
+    }
+
+    //========================================
+    //
+    function _reserve() internal view 
+    {
+        require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
+        // Reserve exactly minimum balance;
+        tvm.rawReserve(_minimumBalance, 0);
     }
 
     //========================================
@@ -310,10 +329,7 @@ abstract contract DnsRecordBase is IDnsRecord
     modifier onlyOwner
     {
         // Owner can make changes only after registration process is completed;
-        bool byPubKey  = (_whoisInfo.ownerID == msg.pubkey()     && msg.pubkey() != 0          );
-        bool byAddress = (_whoisInfo.ownerID == msg.sender.value && msg.sender   != addressZero);
-
-        require(byPubKey || byAddress, ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER);
+        require(_whoisInfo.ownerAddress == msg.sender && msg.sender != addressZero, ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER);
         _;
     }
 

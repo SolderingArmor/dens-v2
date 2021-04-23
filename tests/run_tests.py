@@ -57,6 +57,7 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 
     #signer = generateSigner()
     domain = DnsRecordTEST(name = "org")
+    msig   = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -65,20 +66,28 @@ class Test_01_SameNameDeploy(unittest.TestCase):
     # 1. Giver
     def test_1(self):
         giverGive(self.domain.ADDRESS, TON * 1)
+        giverGive(self.msig.ADDRESS,   TON * 1)
 
-    # 2. Deploy "org"
+    # 2. Deploy multisig
     def test_2(self):
-        result = self.domain.deploy(ownerID = "0x00")
+        result = self.msig.deploy()
         self.assertEqual(result[1]["errorCode"], 0)
 
-    # 3. Deploy "org" once again
+    # 3. Deploy "org"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x00")
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
+        self.assertEqual(result[1]["errorCode"], 0)
+
+    # 4. Deploy "org" once again
+    def test_4(self):
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 51)
 
-    # 4. Cleanup
-    def test_4(self):
+    # 5. Cleanup
+    def test_5(self):
         result = self.domain.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
         self.assertEqual(result[1]["errorCode"], 0)
 
 # ==============================================================================
@@ -86,7 +95,7 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 class Test_02_DeployWithMultisigOwner(unittest.TestCase):
     
     domain = DnsRecordTEST(name = "net")
-    msig   = Multisig()
+    msig   = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -104,7 +113,7 @@ class Test_02_DeployWithMultisigOwner(unittest.TestCase):
         
     # 3. Deploy "net"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig.ADDRESS[2:])
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Call change endpoint from multisig
@@ -132,6 +141,7 @@ class Test_03_WrongNames(unittest.TestCase):
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ORG")},
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "F@!#ING")},
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ddd//dd")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "ff/ff")},
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "//")},
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "")},
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "under_score")},
@@ -142,6 +152,8 @@ class Test_03_WrongNames(unittest.TestCase):
         {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "too000long000domain000name000with64letters000inside000kekekelolz")},
     ]
 
+    msig   = SetcodeMultisig()
+
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
         print("Running:", self.__class__.__name__)
@@ -150,15 +162,21 @@ class Test_03_WrongNames(unittest.TestCase):
     def test_1(self):
         for rec in self.domainDictList:
             giverGive(rec["DOMAIN"].ADDRESS, TON * 1)
-        
-    # 2. Deploys
+        giverGive(self.msig.ADDRESS, TON * 1)
+
+    # 2. Deploy multisig
     def test_2(self):
+        result = self.msig.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+        
+    # 3. Deploys
+    def test_3(self):
         for rec in self.domainDictList:
-            result = rec["DOMAIN"].deploy(ownerID = "0x00")
+            result = rec["DOMAIN"].deploy(ownerAddress = self.msig.ADDRESS)
             self.assertEqual(result[1]["errorCode"], rec["CODE"])
 
-    # 3. Cleanup
-    def test_3(self):
+    # 4. Cleanup
+    def test_4(self):
         for rec in self.domainDictList:
             result = rec["DOMAIN"].destroy(addressDest = freeton_utils.giverGetAddress())
             self.assertEqual(result[1]["errorCode"], 0)
@@ -168,8 +186,7 @@ class Test_03_WrongNames(unittest.TestCase):
 class Test_04_Prolongate(unittest.TestCase):
     
     domain = DnsRecordTEST(name = "net")
-    msig   = Multisig()
-
+    msig   = SetcodeMultisig()
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -187,7 +204,7 @@ class Test_04_Prolongate(unittest.TestCase):
         
     # 3. Deploy "net"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig.ADDRESS[2:])
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Try prolongate
@@ -239,8 +256,8 @@ class Test_05_ClaimFFA(unittest.TestCase):
     
     domain_net     = DnsRecordTEST(name="net")
     domain_net_kek = DnsRecordTEST(name="net/kek")
-    msig1          = Multisig()
-    msig2          = Multisig()
+    msig1          = SetcodeMultisig()
+    msig2          = SetcodeMultisig()
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -262,16 +279,16 @@ class Test_05_ClaimFFA(unittest.TestCase):
         
     # 3. Deploy "net"
     def test_3(self):
-        result = self.domain_net.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain_net.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Deploy "net/kek"
     def test_4(self):
-        result = self.domain_net_kek.deploy(ownerID = "0x" + self.msig2.ADDRESS[2:])
+        result = self.domain_net_kek.deploy(ownerAddress = self.msig2.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_net_kek.run(functionName="getOwnerID", functionParams={})
-        self.assertEqual(result, "0x0000000000000000000000000000000000000000000000000000000000000000")
+        result = self.domain_net_kek.run(functionName="getOwnerAddress", functionParams={})
+        self.assertEqual(result, "0:0000000000000000000000000000000000000000000000000000000000000000")
 
     # 5. Claim
     def test_5(self):
@@ -285,11 +302,11 @@ class Test_05_ClaimFFA(unittest.TestCase):
         result = self.domain_net.run(functionName="getRegistrationType", functionParams={})
         self.assertEqual(result, "0")
 
-        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_net_kek.run(functionName="getOwnerID", functionParams={})
-        self.assertEqual(result, "0x" + self.msig2.ADDRESS[2:])
+        result = self.domain_net_kek.run(functionName="getOwnerAddress", functionParams={})
+        self.assertEqual(result, self.msig2.ADDRESS)
 
     # 6. Cleanup
     def test_6(self):
@@ -309,8 +326,8 @@ class Test_06_ClaimMoney(unittest.TestCase):
 
     domain_domaino     = DnsRecordTEST(name="domaino")
     domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = Multisig()
-    msig2              = Multisig()
+    msig1              = SetcodeMultisig()
+    msig2              = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -332,9 +349,9 @@ class Test_06_ClaimMoney(unittest.TestCase):
         
     # 3. Deploy "domaino" and "domaino/kek"
     def test_3(self):
-        result = self.domain_domaino.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain_domaino.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino_kek.deploy(ownerID = "0x" + ZERO_PUBKEY)
+        result = self.domain_domaino_kek.deploy(ownerAddress = self.msig2.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. change Whois and get Whois
@@ -349,27 +366,27 @@ class Test_06_ClaimMoney(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         #
-        result = getAccountGraphQL(self.domain_domaino.ADDRESS, "balance(format:DEC)")
+        result = getAccountGraphQL(self.msig1.ADDRESS, "balance(format:DEC)")
         balanceBefore = int(result["balance"])
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=400000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=400000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        # Get "storage_fees" into account
+        # Include all the fees into calculation (when multisig receives transfer it pays fees too)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
-            if msg["FUNCTION_NAME"] == "receiveRegistrationRequest":
-                balanceBefore -= int(msg["TX_DETAILS"]["storage"]["storage_fees_collected"])
+            if msg["DEST"] == self.msig1.ADDRESS:
+                balanceBefore -= int(msg["TX_DETAILS"]["total_fees"])
 
         # Check new parent balance
-        result = getAccountGraphQL(self.domain_domaino.ADDRESS, "balance(format:DEC)")
+        result = getAccountGraphQL(self.msig1.ADDRESS, "balance(format:DEC)")
         balanceAfter = int(result["balance"])
         self.assertEqual(balanceAfter, balanceBefore + regPrice)
 
         # Check correct owner
         result = self.domain_domaino_kek.run(functionName="getWhois", functionParams={})
-        self.assertEqual(result["ownerID"], "0x" + self.msig2.ADDRESS[2:])
+        self.assertEqual(result["ownerAddress"], self.msig2.ADDRESS)
 
     # 5. Cleanup
     def test_5(self):
@@ -389,8 +406,8 @@ class Test_07_ClaimOwner(unittest.TestCase):
 
     domain_domaino     = DnsRecordTEST(name="domaino")
     domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = Multisig()
-    msig2              = Multisig()
+    msig1              = SetcodeMultisig()
+    msig2              = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -412,9 +429,9 @@ class Test_07_ClaimOwner(unittest.TestCase):
         
     # 3. Deploy "domaino" and "domaino/kek"
     def test_3(self):
-        result = self.domain_domaino.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain_domaino.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino_kek.deploy(ownerID = "0x" + ZERO_PUBKEY)
+        result = self.domain_domaino_kek.deploy(ownerAddress = self.msig2.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Try to claim the domain
@@ -425,7 +442,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Claim witn msig2 owner (wrong)
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -434,7 +451,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
                 self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "2") # DENIED
 
         # Claim with right owner
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig1.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -444,7 +461,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
 
         # Check correct owner
         result = self.domain_domaino_kek.run(functionName="getWhois", functionParams={})
-        self.assertEqual(result["ownerID"], "0x" + self.msig1.ADDRESS[2:])
+        self.assertEqual(result["ownerAddress"], self.msig1.ADDRESS)
 
     # 5. Cleanup
     def test_5(self):
@@ -464,8 +481,8 @@ class Test_08_ClaimDeny(unittest.TestCase):
 
     domain_net     = DnsRecordTEST(name="net")
     domain_net_kek = DnsRecordTEST(name="net/kek")
-    msig1          = Multisig()
-    msig2          = Multisig()
+    msig1          = SetcodeMultisig()
+    msig2          = SetcodeMultisig()
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -487,16 +504,16 @@ class Test_08_ClaimDeny(unittest.TestCase):
         
     # 3. Deploy "net"
     def test_3(self):
-        result = self.domain_net.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain_net.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Deploy "net/kek"
     def test_4(self):
-        result = self.domain_net_kek.deploy(ownerID = "0x" + ZERO_PUBKEY)
+        result = self.domain_net_kek.deploy(ownerAddress = self.msig2.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_net_kek.run(functionName="getOwnerID", functionParams={})
-        self.assertEqual(result, "0x0000000000000000000000000000000000000000000000000000000000000000")
+        result = self.domain_net_kek.run(functionName="getOwnerAddress", functionParams={})
+        self.assertEqual(result, ZERO_ADDRESS)
 
     # 5. Claim
     def test_5(self):
@@ -509,7 +526,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         result = self.domain_net.run(functionName="getRegistrationType", functionParams={})
         self.assertEqual(result, "3")
 
-        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
@@ -519,8 +536,8 @@ class Test_08_ClaimDeny(unittest.TestCase):
                 regResult = msg["FUNCTION_PARAMS"]["result"]
                 self.assertEqual(regResult, "2") # DENIED
         
-        result = self.domain_net_kek.run(functionName="getOwnerID", functionParams={})
-        self.assertEqual(result, "0x" + ZERO_PUBKEY)
+        result = self.domain_net_kek.run(functionName="getOwnerAddress", functionParams={})
+        self.assertEqual(result, ZERO_ADDRESS)
 
     # 6. Cleanup
     def test_6(self):
@@ -539,7 +556,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
 class Test_09_RegisterWithNoParent(unittest.TestCase):
 
     domain = DnsRecordTEST(name="net/some/shit")
-    msig   = Multisig()
+    msig   = SetcodeMultisig()
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -557,12 +574,12 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
         
     # 3. Deploy "net/some/shit"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + ZERO_PUBKEY)
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Claim
     def test_4(self):
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check onBounce/aborted
@@ -573,8 +590,8 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
                 self.assertEqual(regResult, True) # Aborted
 
         # Owner should still be 0
-        result = self.domain.run(functionName="getOwnerID", functionParams={})
-        self.assertEqual(result, "0x" + ZERO_PUBKEY)
+        result = self.domain.run(functionName="getOwnerAddress", functionParams={})
+        self.assertEqual(result, ZERO_ADDRESS)
 
     # 5. Cleanup
     def test_5(self):
@@ -589,8 +606,8 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 
     domain_domaino     = DnsRecordTEST(name="domaino")
     domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = Multisig()
-    msig2              = Multisig()
+    msig1              = SetcodeMultisig()
+    msig2              = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -612,9 +629,9 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         
     # 3. Deploy "domaino" and "domaino/kek"
     def test_3(self):
-        result = self.domain_domaino.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain_domaino.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino_kek.deploy(ownerID = "0x" + ZERO_PUBKEY)
+        result = self.domain_domaino_kek.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. change Whois and get Whois
@@ -622,17 +639,17 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         price = 200000000
 
         # Change owners 6 times
-        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig1.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig1.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerID":"0x" + self.msig1.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         result = self.domain_domaino.run(functionName="getWhois", functionParams={})
@@ -642,7 +659,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
@@ -663,7 +680,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # We try to include less money than price
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -673,7 +690,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
                 self.assertEqual(regResult, "3") # NOT_ENOUGH_MONEY
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=400000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=400000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         result = self.domain_domaino.run(functionName="getWhois", functionParams={})
@@ -682,7 +699,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 
         # Check correct owner
         result = self.domain_domaino_kek.run(functionName="getWhois", functionParams={})
-        self.assertEqual(result["ownerID"], "0x" + self.msig2.ADDRESS[2:])
+        self.assertEqual(result["ownerAddress"], self.msig2.ADDRESS)
 
     # 5. Cleanup
     def test_5(self):
@@ -701,7 +718,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 class Test_11_ChangeWhois(unittest.TestCase):   
     
     domain = DnsRecordTEST(name="domaino")
-    msig   = Multisig()
+    msig   = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -719,7 +736,7 @@ class Test_11_ChangeWhois(unittest.TestCase):
         
     # 3. Deploy "domaino"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig.ADDRESS[2:])
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. change Whois and get Whois
@@ -749,7 +766,7 @@ class Test_11_ChangeWhois(unittest.TestCase):
 class Test_12_ReleaseDomain(unittest.TestCase): 
     
     domain = DnsRecordTEST(name="dominos")
-    msig   = Multisig()
+    msig   = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -767,7 +784,7 @@ class Test_12_ReleaseDomain(unittest.TestCase):
         
     # 3. Deploy "dominos"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig.ADDRESS[2:])
+        result = self.domain.deploy(ownerAddress = self.msig.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. change Whois and get Whois
@@ -776,73 +793,11 @@ class Test_12_ReleaseDomain(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         result = self.domain.run(functionName="getWhois", functionParams={})
-        self.assertEqual(result["ownerID"],          "0x" + ZERO_PUBKEY)
-        self.assertEqual(result["dtExpires"],        "0"               )
-        self.assertEqual(result["endpointAddress"],  ZERO_ADDRESS      )
-        self.assertEqual(result["registrationType"], "3"               )
-        self.assertEqual(result["comment"],          ""                )
-
-    # 5. Cleanup
-    def test_5(self):
-        result = self.domain.destroy(addressDest = freeton_utils.giverGetAddress())
-        self.assertEqual(result[1]["errorCode"], 0)
-
-        result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
-        self.assertEqual(result[1]["errorCode"], 0)
-
-
-# ==============================================================================
-# 
-class Test_13_WithdrawBalance(unittest.TestCase):
-    
-    domain = DnsRecordTEST(name="dominos")
-    msig   = Multisig()
-    
-    def test_0(self):
-        print("\n\n----------------------------------------------------------------------")
-        print("Running:", self.__class__.__name__)
-
-    # 1. Giver
-    def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
-        
-    # 2. Deploy multisig
-    def test_2(self):
-        result = self.msig.deploy()
-        self.assertEqual(result[1]["errorCode"], 0)
-        
-    # 3. Deploy "dominos"
-    def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig.ADDRESS[2:])
-        self.assertEqual(result[1]["errorCode"], 0)
-
-    # 4. Withdraw some TONs
-    def test_4(self):
-        amount = 200000000
-
-        # Get balances
-        result = getAccountGraphQL(self.domain.ADDRESS, "balance(format:DEC)")
-        balanceDomain1 = int(result["balance"])
-        
-        result = getAccountGraphQL(self.msig.ADDRESS, "balance(format:DEC)")
-        balanceMsig1 = int(result["balance"])
-        
-        # Withdraw
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="withdrawBalance", functionParams={"amount":amount,"dest":self.msig.ADDRESS}, value=100000000, flags=1)
-        self.assertEqual(result[1]["errorCode"], 0)
-
-        # Get balances again
-        result = getAccountGraphQL(self.domain.ADDRESS, "balance(format:DEC)")
-        balanceDomain2 = int(result["balance"])
-
-        result = getAccountGraphQL(self.msig.ADDRESS, "balance(format:DEC)")
-        balanceMsig2 = int(result["balance"])
-
-        # I DON'T KNOW HOW TO CALCULATE EXACT BALANCE! sigh
-        self.assertLess   (balanceDomain2, balanceDomain1 - amount)
-        self.assertLess   (balanceMsig2,   balanceMsig1   + amount)
-        self.assertGreater(balanceMsig2,   balanceMsig1)
+        self.assertEqual(result["ownerAddress"],     ZERO_ADDRESS)
+        self.assertEqual(result["dtExpires"],        "0"         )
+        self.assertEqual(result["endpointAddress"],  ZERO_ADDRESS)
+        self.assertEqual(result["registrationType"], "3"         )
+        self.assertEqual(result["comment"],          ""          )
 
     # 5. Cleanup
     def test_5(self):
@@ -854,11 +809,11 @@ class Test_13_WithdrawBalance(unittest.TestCase):
 
 # ==============================================================================
 # 
-class Test_14_ClaimAlreadyClaimed(unittest.TestCase):       
+class Test_13_ClaimAlreadyClaimed(unittest.TestCase):       
 
     domain = DnsRecordTEST(name="domaino")
-    msig1  = Multisig()
-    msig2  = Multisig()
+    msig1  = SetcodeMultisig()
+    msig2  = SetcodeMultisig()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -879,7 +834,7 @@ class Test_14_ClaimAlreadyClaimed(unittest.TestCase):
         
     # 3. Deploy "domaino"
     def test_3(self):
-        result = self.domain.deploy(ownerID = "0x" + self.msig1.ADDRESS[2:])
+        result = self.domain.deploy(ownerAddress = self.msig1.ADDRESS)
         self.assertEqual(result[1]["errorCode"], 0)
 
     # 4. Try to claim
@@ -889,7 +844,7 @@ class Test_14_ClaimAlreadyClaimed(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Try to claim from other multisig
-        result = self.domain.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerID":"0x" + self.msig2.ADDRESS[2:]}, value=100000000, flags=1)
+        result = self.domain.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 202) # ERROR_DOMAIN_IS_NOT_EXPIRED
 

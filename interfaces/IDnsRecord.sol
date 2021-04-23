@@ -34,7 +34,7 @@ struct DnsWhois
     string     parentDomainName;    //
     address    parentDomainAddress; //
     //
-    uint256    ownerID;             //
+    address    ownerAddress;        //
     uint32     dtLastProlongation;  //
     uint32     dtExpires;           //
     uint128    registrationPrice;   // 
@@ -57,8 +57,8 @@ interface IDnsRecord
 {
     //========================================
     // Events
-    event newSubdomainRegistered(uint32 dt, string domainName, uint128 price  );
-    event registrationResult    (uint32 dt, REG_RESULT result, uint256 ownerID);
+    event newSubdomainRegistered(uint32 dt, string domainName, uint128 price       );
+    event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress);
     event domainReleased        (uint32 dt);
 
     //========================================
@@ -74,7 +74,7 @@ interface IDnsRecord
     function getParentDomainName()     external view returns (string    );
     function getParentDomainAddress()  external view returns (address   );    
     //
-    function getOwnerID()              external view returns (uint256   );
+    function getOwnerAddress()         external view returns (address   );
     function getDtLastProlongation()   external view returns (uint32    );
     function getDtExpires()            external view returns (uint32    );
     function getRegistrationPrice()    external view returns (uint128   );
@@ -87,6 +87,7 @@ interface IDnsRecord
     function getSubdomainRegAccepted() external view returns (uint32    );
     function getSubdomainRegDenied()   external view returns (uint32    );
     function getTotalFeesCollected()   external view returns (uint128   );
+    function getMinimumBalance()       external view returns (uint128   );
     //
     function canProlongate()           external view returns (bool      );
     function isExpired()               external view returns (bool      );
@@ -107,11 +108,9 @@ interface IDnsRecord
     /// @notice Change the owner;
     ///         Resets some DNS values like endpointAddress and comment;
     ///
-    /// @param newOwnerID  - address or pubkey  of a new owner; can be (0, 0);
-    ///
-    /// @dev If you set both newOwnerAddress and newOwnerPubkey to 0, you will loose ownership of the domain!
+    /// @param newOwnerAddress - address of a new owner; CAN NOT be (0, 0);
     //
-    function changeOwner(uint256 newOwnerID) external;
+    function changeOwner(address newOwnerAddress) external;
     
     /// @notice Change sub-domain registration type;
     ///
@@ -138,9 +137,9 @@ interface IDnsRecord
     /// @dev If REG_TYPE == REG_TYPE.MONEY on parent, all extra TONs (from msg.value) that exceed registration price will BE RETURNED to caller's account;
     ///      Plan accordingly: "msg.value" should equal to registration price + all child fees + all parent fees;
     ///
-    /// @param newOwnerID - address or pubkey  of a new owner; can be (0, 0);
+    /// @param newOwnerAddress - address or pubkey  of a new owner; can be (0, 0);
     //
-    function claimExpired(uint256 newOwnerID) external;
+    function claimExpired(address newOwnerAddress) external;
     
     /// @notice Release a domain, owner becomes no one, dtExpires becomes 0;
     //
@@ -148,16 +147,16 @@ interface IDnsRecord
 
     /// @notice Receive registration request from a sub-domain;
     ///
-    /// @param domainName - sub-domain name;
-    /// @param ownerID    - address or pubkey  of a new owner;
+    /// @param domainName   - sub-domain name;
+    /// @param ownerAddress - address of a new owner;
     //
-    function receiveRegistrationRequest(string domainName, uint256 ownerID, address payerAddress) external responsible returns (REG_RESULT, uint256, address);
+    function receiveRegistrationRequest(string domainName, address ownerAddress, address payerAddress) external responsible returns (REG_RESULT, address, address);
     
     /// @notice Callback received from parent domain with registration result;
     ///
     /// @param result - registration result;
     //
-    function callbackOnRegistrationRequest(REG_RESULT result, uint256 ownerID, address payerAddress) external;
+    function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, address payerAddress) external;
 
     //========================================
     // Sub-domain management
@@ -169,15 +168,12 @@ interface IDnsRecord
     function changeRegistrationPrice(uint128 newPrice) external;
     
     //========================================
-    // Misc
-
-    /// @notice Withdraw some balance;
+    // 
+    /// @notice Change minimum balance this contract needs to maintain;
     ///
-    /// @param amount - amount in nanotons;
-    /// @param dest   - money destination;
+    /// @param newMinimumBalance - new registration price;
     //
-    function withdrawBalance(uint128 amount, address dest) external;
-
+    function changeMinimumBalance(uint128 newMinimumBalance) external;
 }
 
 //================================================================================

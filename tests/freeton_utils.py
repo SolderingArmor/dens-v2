@@ -344,7 +344,7 @@ def unwrapMessages(messageIdArray, abiFilesArray):
 
 # ==============================================================================
 #
-class Multisig(object):
+class SetcodeMultisig(object):
     def __init__(self, signer: Signer = None):
         self.SIGNER      = generateSigner() if signer is None else signer
         self.ABI         = "../bin/SetcodeMultisigWallet.abi.json"
@@ -384,7 +384,7 @@ def giverGetAddress():
         return "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
     else:
         signer = loadSigner(MSIG_GIVER)
-        msig   = Multisig(signer=signer)
+        msig   = SetcodeMultisig(signer=signer)
         return msig.ADDRESS
 
 def giverGive(contractAddress, amountTons):
@@ -400,7 +400,7 @@ def giverGive(contractAddress, amountTons):
         callFunction("../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
     else:
         signer = loadSigner(MSIG_GIVER)
-        msig   = Multisig(signer=signer)
+        msig   = SetcodeMultisig(signer=signer)
         msig.callTransfer(addressDest=contractAddress, value=amountTons, payload="", flags=1)
 
 # ==============================================================================
