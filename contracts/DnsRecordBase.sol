@@ -75,7 +75,6 @@ abstract contract DnsRecordBase is IDnsRecord
     function getSubdomainRegAccepted() external view override returns (uint32    ) {    return _whoisInfo.subdomainRegAccepted;         }
     function getSubdomainRegDenied()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegDenied;           }
     function getTotalFeesCollected()   external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
-    //function getMinimumBalance()       public   view override returns (uint128   ) {    return gasToValue(500000, 0);                   }
     //
     function canProlongate()           public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
                                                                                                 now >= _whoisInfo.dtExpires - tenDays); }
@@ -89,11 +88,6 @@ abstract contract DnsRecordBase is IDnsRecord
         require(address(this).balance > balance, ERROR_NOT_ENOUGH_MONEY);
         // Reserve exactly minimum balance;
         tvm.rawReserve(balance, 0);
-
-
-        /*require(address(this).balance > _minimumBalance, ERROR_NOT_ENOUGH_MONEY);
-        // Reserve exactly minimum balance;
-        tvm.rawReserve(_minimumBalance, 0);*/
     }
 
     //========================================

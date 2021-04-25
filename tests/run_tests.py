@@ -214,6 +214,8 @@ class Test_04_Prolongate(unittest.TestCase):
         # ERROR_CAN_NOT_PROLONGATE_YET is a result in internal message, can't see it here 
         # but can see in outgoing internal message result (it is MESSAGE ID with internal transaction): result[0].transaction["out_msgs"][0]
         # 
+        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        #pprint(msgArray)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 205) # ERROR_CAN_NOT_PROLONGATE_YET
 
@@ -227,6 +229,8 @@ class Test_04_Prolongate(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Check again
+        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        #pprint(msgArray)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 0)
 
@@ -239,6 +243,8 @@ class Test_04_Prolongate(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Check again
+        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        #pprint(msgArray)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 201) # ERROR_DOMAIN_IS_EXPIRED
 
@@ -369,11 +375,12 @@ class Test_06_ClaimMoney(unittest.TestCase):
         balanceBefore = int(result["balance"])
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=400000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Include all the fees into calculation (when multisig receives transfer it pays fees too)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        #pprint(msgArray)
         for msg in msgArray:
             if msg["DEST"] == self.msig1.ADDRESS:
                 balanceBefore -= int(msg["TX_DETAILS"]["total_fees"])
@@ -454,6 +461,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
         
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        #pprint(msgArray)
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "1") # APPROVED
@@ -689,7 +697,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
                 self.assertEqual(regResult, "3") # NOT_ENOUGH_MONEY
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=400000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         result = self.domain_domaino.run(functionName="getWhois", functionParams={})

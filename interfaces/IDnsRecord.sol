@@ -120,7 +120,7 @@ interface IDnsRecord
 
     /// @notice Change sub-domain registration price;
     ///
-    /// @param newPrice - new registration price;
+    /// @param newPrice - new price;
     //
     function changeRegistrationPrice(uint128 newPrice) external;
 
@@ -141,9 +141,11 @@ interface IDnsRecord
     /// @notice Claim an expired DeNS Record; claiming is the same as registering new domain, except you don't deploy;
     ///
     /// @dev If REG_TYPE == REG_TYPE.MONEY on parent, all extra TONs (from msg.value) that exceed registration price will BE RETURNED to caller's account;
-    ///      Plan accordingly: "msg.value" should equal to registration price + all child fees + all parent fees;
+    ///      Plan accordingly: "msg.value" should equal to:
+    ///      registration price (is 0 if REG_TYPE != MONEY) + all child fees (equivalent of 100'000 gas, or 0.1 TON should be enough) + all parent fees (equivalent of 300'000 gas, or 0.3 TON should be enough);
+    ///      Long story short: extra 0.5 TON will cover everything, the change will be sent back;
     ///
-    /// @param newOwnerAddress - address or pubkey  of a new owner; can be (0, 0);
+    /// @param newOwnerAddress - address or pubkey  of a new owner; can be 0;
     //
     function claimExpired(address newOwnerAddress) external;
     

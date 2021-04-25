@@ -16,6 +16,7 @@ from binascii import unhexlify
 import pathlib
 import ast
 from datetime import datetime
+from pprint import pprint
 
 # ==============================================================================
 # 
@@ -25,20 +26,6 @@ ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000
 MSIG_GIVER    = ""
 USE_GIVER     = True
 THROW         = False
-
-# ==============================================================================
-# 
-#def changeConfig(httpAddress, useGiver, throw):
-#
-#    #global asyncClient
-#    global USE_GIVER
-#    global THROW
-#    #if httpAddress != "":
-#    #    config      = ClientConfig()
-#    #    config.network.server_address = httpAddress
-#    #    asyncClient = TonClient(config=config)
-#    USE_GIVER = useGiver
-#    THROW     = throw
 
 # ==============================================================================
 # 
@@ -300,29 +287,51 @@ def getExitCodeFromMessageID(messageID, fields):
 #
 def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
 
+    #messageFilters     = "id, src, dst, body, dst_transaction{id}, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
+    # TODO: temporary fix, to exclude EVENT from calculations for now
     messageFilters     = "id, src, dst, body, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
-    transactionFilters = "out_msgs, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
+    messageFiltersFix  = "id, src, dst, body, dst_transaction{id}, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
+    transactionFilters = "out_msgs, outmsg_cnt, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
 
-    resultMsg                = getMessageGraphQL(messageID, messageFilters)
+    resultMsg = getMessageGraphQL(messageID, messageFilters)
     if resultMsg == "":
-        return []        
+        return []
     (abi, resultMessageBody) = decodeMessageBody(resultMsg["body"], abiFilesArray)
-    resultTransaction        = getTransactionGraphQL(messageID, transactionFilters)
+
+    # TODO: temporary fix, to exclude EVENT from calculations for now
+    if (resultMessageBody != "" and resultMessageBody.body_type != "Event") or resultMessageBody == "":
+        resultMsg = getMessageGraphQL(messageID, messageFiltersFix)
+
+    # Loop while we are waiting for all results
+    resultTransaction = ""
+    while True:
+        if resultMsg["dst"] == "":
+            break
+        if resultMsg["dst_transaction"] is None:
+            break
+        if resultMsg["dst_transaction"]["id"] is None:
+            break
+        resultTransaction = getTransactionGraphQL(messageID, transactionFilters)
+        if resultTransaction != "":
+            break
+        else:
+            time.sleep(1)
 
     arrayMsg = [{
         "SOURCE":             resultMsg["src"],
-        "DEST":               resultMsg["dst"],
+        "DEST":               resultMsg["dst"] if resultMsg["dst"] != "" else "---",
         "VALUE":              resultMsg["value"],
         "FEES":               {"ihr_fee":resultMsg["ihr_fee"], "import_fee":resultMsg["import_fee"], "fwd_fee":resultMsg["fwd_fee"]},
         "MESSAGE_ID:":        messageID,
         "PARENT_MESSAGE_ID:": parentMessageID,
-        "TARGE_ABI":          abi,
-        "CALL_TYPE":          resultMessageBody.body_type   if resultMessageBody != "" else "---",
-        "FUNCTION_NAME":      resultMessageBody.name        if resultMessageBody != "" else "---",
-        "FUNCTION_PARAMS":    resultMessageBody.value       if resultMessageBody != "" else "---",
-        "MSG_HEADER":         resultMessageBody.header      if resultMessageBody != "" else "---",
-        "OUT_MSGS":           resultTransaction["out_msgs"] if resultTransaction != "" else [],
-        "TX_DETAILS":         resultTransaction,
+        "TARGET_ABI":         abi,
+        "CALL_TYPE":          resultMessageBody.body_type     if resultMessageBody != "" else "---",
+        "FUNCTION_NAME":      resultMessageBody.name          if resultMessageBody != "" else "---",
+        "FUNCTION_PARAMS":    resultMessageBody.value         if resultMessageBody != "" else "---",
+        "MSG_HEADER":         resultMessageBody.header        if resultMessageBody != "" else "---",
+        "OUT_MSGS":           resultTransaction["out_msgs"]   if resultTransaction != "" else [],
+        "OUT_MSG_CNT":        resultTransaction["outmsg_cnt"] if resultTransaction != "" else 0,
+        "TX_DETAILS":         resultTransaction               if resultTransaction != "" else "---"
     }]
 
     if resultTransaction != "":

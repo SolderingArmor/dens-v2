@@ -129,7 +129,9 @@ contract DnsRecord is DnsRecordBase
         else if(_whoisInfo.registrationType == REG_TYPE.DENY)   {    result = REG_RESULT.DENIED;      }
         else if(_whoisInfo.registrationType == REG_TYPE.MONEY)
         {
-            if(msg.value > _whoisInfo.registrationPrice)
+            uint128 minimumFee = gasToValue(300000, 0);
+
+            if(msg.value >= (_whoisInfo.registrationPrice + minimumFee))
             {
                 address(_whoisInfo.ownerAddress).transfer(_whoisInfo.registrationPrice, false, 1);
                 _whoisInfo.totalFeesCollected += _whoisInfo.registrationPrice;
