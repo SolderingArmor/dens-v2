@@ -310,8 +310,8 @@ abstract contract DnsRecordBase is IDnsRecord
             return(segments, "");
         }
         
-        uint32 lastSegmentName = segments[segments.length-1].byteLength();
-        uint32 parentLength    = domainName.byteLength() - lastSegmentName - 1;
+        uint32 lastSegmentName = uint32(segments[segments.length-1].byteLength());
+        uint32 parentLength    = uint32(domainName.byteLength()) - lastSegmentName - 1;
         string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength - 1));
 
         return (segments, parentName);
