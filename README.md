@@ -10,6 +10,8 @@ Magic...
 
 Please check `tests/manual_deployment.py` example.
 
+Don't run it "as is", rather understand the syntax and change the script as you want.
+
 Requirements: `ton-client-py` python library.
 
 ```

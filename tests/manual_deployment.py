@@ -14,7 +14,7 @@ freeton_utils.asyncClient = TonClient(config=ClientConfig(network=NetworkConfig(
 # ==============================================================================
 # 
 # Create a DnsRecord class with "freeton" name
-domain = DnsRecord(name="freeton")
+domain = DnsRecord(name="freeton/something")
 
 # Create a Multisig class with a random keypair
 msig   = SetcodeMultisig()
@@ -26,10 +26,16 @@ msig   = SetcodeMultisig()
 giverGive(contractAddress=domain.ADDRESS, amountTons=TON*1)
 giverGive(contractAddress=msig.ADDRESS,   amountTons=TON*1)
 
-# Deploy DnsRecord with Multisig address as owner; please note, "0:" is removed from owner to keep only uint256;
+# Deploy DnsRecord with SetcodeMultisig address as owner;
 result = domain.deploy(ownerAddress = msig.ADDRESS)
 pprint(result[0].transaction)
 pprint(result[1])
+
+# Claim domain; this is not needed for top-level domains;
+# Change "value=TON" to the required amount; don't forget to add extra 0.5 TON to pay all fes, all change will be returned to SetcodeMultisig;
+result   = domain.callFromMultisig(msig=msig, functionName="claimExpired", functionParams={"newOwnerAddress":msig.ADDRESS}, value=TON, flags=1)
+msgArray = unwrapMessages(result[0].transaction["out_msgs"], ["../contracts/DnsRecord.abi.json"])
+pprint(msgArray)
 
 # Check Whois
 result = domain.run(functionName="getWhois", functionParams={})
