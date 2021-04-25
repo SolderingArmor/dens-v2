@@ -865,6 +865,126 @@ class Test_13_ClaimAlreadyClaimed(unittest.TestCase):
         result = self.msig2.destroy(addressDest = freeton_utils.giverGetAddress())
         self.assertEqual(result[1]["errorCode"], 0)
 
+
+# ==============================================================================
+#
+class Test_14_LongestName(unittest.TestCase):
+    
+    domain_1     = DnsRecordTEST(name="1234567890123456789012345678901")
+    domain_2     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901")
+    domain_3     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
+    domain_4     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
+    msig1        = SetcodeMultisig()
+    msig2        = SetcodeMultisig()
+    msig3        = SetcodeMultisig()
+    msig4        = SetcodeMultisig()
+
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain_1.ADDRESS,     TON * 1)
+        giverGive(self.domain_2.ADDRESS,     TON * 1)
+        giverGive(self.domain_3.ADDRESS,     TON * 1)
+        giverGive(self.domain_4.ADDRESS,     TON * 1)
+        giverGive(self.msig1.ADDRESS,        TON * 2)
+        giverGive(self.msig2.ADDRESS,        TON * 2)
+        giverGive(self.msig3.ADDRESS,        TON * 2)
+        giverGive(self.msig4.ADDRESS,        TON * 2)
+
+    # 2. Deploy multisig
+    def test_2(self):
+        result = self.msig1.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig2.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig3.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig4.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+        
+    # 3. Deploy domains
+    def test_3(self):
+        result = self.domain_1.deploy(ownerAddress = self.msig1.ADDRESS)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_2.deploy(ownerAddress = self.msig2.ADDRESS)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_3.deploy(ownerAddress = self.msig3.ADDRESS)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_4.deploy(ownerAddress = self.msig4.ADDRESS)
+        self.assertEqual(result[1]["errorCode"], 0)
+
+    # 5. Claim
+    def test_5(self):
+
+        regPrice = 500000000
+
+        # 1
+        result = self.domain_1.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_1.callFromMultisig(msig=self.msig1, functionName="changeRegistrationPrice", functionParams={"newPrice":regPrice}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 0)
+
+        # 2
+        result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=TON, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="changeRegistrationPrice", functionParams={"newPrice":regPrice}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 0)
+
+        # 3
+        result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig3.ADDRESS}, value=TON, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="changeRegistrationPrice", functionParams={"newPrice":regPrice}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 0)
+
+        # 4
+        result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig4.ADDRESS}, value=TON, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="changeRegistrationPrice", functionParams={"newPrice":regPrice}, value=100000000, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 0)
+
+    # 6. Cleanup
+    def test_6(self):
+        result = self.domain_1.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_2.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_3.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_4.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+
+        result = self.msig1.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig2.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig3.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig4.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+
 # ==============================================================================
 # 
 unittest.main()
