@@ -6,18 +6,26 @@ Please visit https://freeton.domains/about for general info.
 
 Magic...
 
+# General information about deployment
+
+Here...
+
 # Manual deployment
+
+Requirements: `ton-client-py` python library.
 
 Please check `tests/manual_deployment.py` example.
 
-Don't run it "as is", rather understand the syntax and change the script as you want.
-
-Requirements: `ton-client-py` python library.
+Don't run it "as is", rather understand the syntax and change the script as you want.\
 
 ```
 cd tests
 ./manual_deployment.py
 ```
+
+# General information about claiming
+
+Here...
 
 # Running the tests
 

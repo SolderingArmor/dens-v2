@@ -69,164 +69,11 @@
 			]
 		},
 		{
-			"name": "callWhois",
-			"inputs": [
-				{"name":"_answer_id","type":"uint32"}
-			],
-			"outputs": [
-				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerAddress","type":"address"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
-			]
-		},
-		{
-			"name": "getWhois",
-			"inputs": [
-			],
-			"outputs": [
-				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerAddress","type":"address"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint32"},{"name":"subdomainRegAccepted","type":"uint32"},{"name":"subdomainRegDenied","type":"uint32"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
-			]
-		},
-		{
-			"name": "getDomainName",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bytes"}
-			]
-		},
-		{
 			"name": "getDomainCode",
 			"inputs": [
 			],
 			"outputs": [
 				{"name":"value0","type":"cell"}
-			]
-		},
-		{
-			"name": "getEndpointAddress",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"address"}
-			]
-		},
-		{
-			"name": "getSegmentsCount",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint8"}
-			]
-		},
-		{
-			"name": "getParentDomainName",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bytes"}
-			]
-		},
-		{
-			"name": "getParentDomainAddress",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"address"}
-			]
-		},
-		{
-			"name": "getOwnerAddress",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"address"}
-			]
-		},
-		{
-			"name": "getDtLastProlongation",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getDtExpires",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getRegistrationPrice",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint128"}
-			]
-		},
-		{
-			"name": "getRegistrationType",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint8"}
-			]
-		},
-		{
-			"name": "getLastRegResult",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint8"}
-			]
-		},
-		{
-			"name": "getComment",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bytes"}
-			]
-		},
-		{
-			"name": "getDtCreated",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getTotalOwnersNum",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getSubdomainRegAccepted",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getSubdomainRegDenied",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint32"}
-			]
-		},
-		{
-			"name": "getTotalFeesCollected",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"uint128"}
 			]
 		},
 		{
@@ -243,6 +90,40 @@
 			],
 			"outputs": [
 				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "callWhois",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"}
+			],
+			"outputs": [
+				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerAddress","type":"address"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint128"},{"name":"subdomainRegAccepted","type":"uint128"},{"name":"subdomainRegDenied","type":"uint128"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
+			]
+		},
+		{
+			"name": "getWhois",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerAddress","type":"address"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint128"},{"name":"subdomainRegAccepted","type":"uint128"},{"name":"subdomainRegDenied","type":"uint128"},{"name":"totalFeesCollected","type":"uint128"}],"name":"value0","type":"tuple"}
+			]
+		},
+		{
+			"name": "callEndpointAddress",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"}
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
+			]
+		},
+		{
+			"name": "getEndpointAddress",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
 			]
 		},
 		{

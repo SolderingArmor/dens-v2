@@ -1,4 +1,4 @@
-pragma ton-solidity >= 0.38.0;
+pragma ton-solidity >= 0.42.0;
 pragma AbiHeader time;
 pragma AbiHeader pubkey;
 pragma AbiHeader expire;
@@ -28,6 +28,7 @@ abstract contract DnsRecordBase is IDnsRecord
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER      = 100;
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT       = 101;
     uint constant ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE = 102;
+    uint constant ERROR_WORKCHAIN_NEEDS_TO_BE_0             = 103;
     uint constant ERROR_DOMAIN_NAME_NOT_VALID               = 200;
     uint constant ERROR_DOMAIN_IS_EXPIRED                   = 201;
     uint constant ERROR_DOMAIN_IS_NOT_EXPIRED               = 202;
@@ -41,6 +42,7 @@ abstract contract DnsRecordBase is IDnsRecord
     uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID         = 210;
     uint constant ERROR_NOT_ENOUGH_MONEY                    = 211;
     uint constant ERROR_ADDRESS_CAN_NOT_BE_EMPTY            = 212;
+    uint constant ERROR_CAN_NOT_TRANSFER_TO_YOURSELF        = 213;
     
     //========================================
     // Variables
@@ -51,35 +53,18 @@ abstract contract DnsRecordBase is IDnsRecord
 
     //========================================
     // Getters
-    function callWhois()   external view responsible override returns (DnsWhois  ) {    return{value: 0, flag: 64}(_whoisInfo);         }
-    function getWhois()                external view override returns (DnsWhois  ) {    return _whoisInfo;                              }
+    function getDomainCode() external view override returns (TvmCell) {    return _domainCode;  }
     //
-    function getDomainName()           external view override returns (string    ) {    return _whoisInfo.domainName;                   }
-    function getDomainCode()           external view override returns (TvmCell   ) {    return _domainCode;                             }
+    function canProlongate() public   view override returns (bool   ) {    return (now <= _whoisInfo.dtExpires && 
+                                                                                   now >= _whoisInfo.dtExpires - tenDays);  }
+    function isExpired()     public   view override returns (bool   ) {    return  now >  _whoisInfo.dtExpires;             }
+    // 
+    function callWhois() external view responsible override returns (DnsWhois) {    _reserve();  return{value: 0, flag: 128}(_whoisInfo);  }
+    function  getWhois() external view             override returns (DnsWhois) {                 return                      _whoisInfo;   }
     //
-    function getEndpointAddress()      external view override returns (address   ) {    return _whoisInfo.endpointAddress;              }
-    function getSegmentsCount()        external view override returns (uint8     ) {    return _whoisInfo.segmentsCount;                }
-    function getParentDomainName()     external view override returns (string    ) {    return _whoisInfo.parentDomainName;             }
-    function getParentDomainAddress()  external view override returns (address   ) {    return _whoisInfo.parentDomainAddress;          }    
-    //
-    function getOwnerAddress()         external view override returns (address   ) {    return _whoisInfo.ownerAddress;                 }
-    function getDtLastProlongation()   external view override returns (uint32    ) {    return _whoisInfo.dtLastProlongation;           }
-    function getDtExpires()            external view override returns (uint32    ) {    return _whoisInfo.dtExpires;                    }
-    function getRegistrationPrice()    external view override returns (uint128   ) {    return _whoisInfo.registrationPrice;            }
-    function getRegistrationType()     external view override returns (REG_TYPE  ) {    return _whoisInfo.registrationType;             }
-    function getLastRegResult()        external view override returns (REG_RESULT) {    return _whoisInfo.lastRegResult;                }
-    function getComment()              external view override returns (string    ) {    return _whoisInfo.comment;                      }
-    //
-    function getDtCreated()            external view override returns (uint32    ) {    return _whoisInfo.dtCreated;                    }
-    function getTotalOwnersNum()       external view override returns (uint32    ) {    return _whoisInfo.totalOwnersNum;               }
-    function getSubdomainRegAccepted() external view override returns (uint32    ) {    return _whoisInfo.subdomainRegAccepted;         }
-    function getSubdomainRegDenied()   external view override returns (uint32    ) {    return _whoisInfo.subdomainRegDenied;           }
-    function getTotalFeesCollected()   external view override returns (uint128   ) {    return _whoisInfo.totalFeesCollected;           }
-    //
-    function canProlongate()           public   view override returns (bool      ) {    return (now <= _whoisInfo.dtExpires && 
-                                                                                                now >= _whoisInfo.dtExpires - tenDays); }
-    function isExpired()               public   view override returns (bool      ) {    return  now >  _whoisInfo.dtExpires;            }
-    
+    function callEndpointAddress() external view responsible override returns (address) {    _reserve();  return{value: 0, flag: 128}(_whoisInfo.endpointAddress);  }
+    function  getEndpointAddress() external view             override returns (address) {                 return                      _whoisInfo.endpointAddress;   }
+ 
     //========================================
     //
     function _reserve() internal view
@@ -141,17 +126,13 @@ abstract contract DnsRecordBase is IDnsRecord
 
     function changeOwner(address newOwnerAddress) external override onlyOwner notExpired
     {
-        require(newOwnerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
+        require(newOwnerAddress != addressZero,             ERROR_ADDRESS_CAN_NOT_BE_EMPTY    );
+        require(newOwnerAddress != _whoisInfo.ownerAddress, ERROR_CAN_NOT_TRANSFER_TO_YOURSELF);
         
         _reserve();
-        
-        // Increase counter only if new owner is different
-        if(newOwnerAddress != _whoisInfo.ownerAddress)
-        {
-            _whoisInfo.totalOwnersNum += 1;
-        }
 
         _changeOwner(newOwnerAddress);
+        _whoisInfo.totalOwnersNum += 1;
         msg.sender.transfer(0, false, 128);
     }
 
@@ -328,7 +309,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
     modifier onlyRoot
     {
-        require(_whoisInfo.parentDomainAddress == msg.sender, ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT);
+        require(_whoisInfo.parentDomainAddress == msg.sender && msg.sender != addressZero, ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT);
         _;
     }
 

@@ -1,4 +1,4 @@
-pragma ton-solidity >= 0.38.0;
+pragma ton-solidity >= 0.42.0;
 pragma AbiHeader time;
 pragma AbiHeader pubkey;
 pragma AbiHeader expire;
@@ -44,9 +44,9 @@ struct DnsWhois
     //
     // Statistics
     uint32     dtCreated;            //
-    uint32     totalOwnersNum;       // Total owners number, increases when expired domain is claimed;
-    uint32     subdomainRegAccepted; // Total number of sub-domains registerations accepted;
-    uint32     subdomainRegDenied;   // Total number of sub-domains registerations denied;
+    uint128    totalOwnersNum;       // Total owners number, increases when expired domain is claimed;
+    uint128    subdomainRegAccepted; // Total number of sub-domains registerations accepted;
+    uint128    subdomainRegDenied;   // Total number of sub-domains registerations denied;
     uint128    totalFeesCollected;   // Total fees collected registering subdomains;
     
 }
@@ -64,34 +64,14 @@ interface IDnsRecord
 
     //========================================
     // Getters
-    function callWhois()   external view responsible returns (DnsWhois  );
-    function getWhois()                external view returns (DnsWhois  );
+    function getDomainCode() external view returns (TvmCell);
+    function canProlongate() external view returns (bool   );
+    function isExpired()     external view returns (bool   );
     //
-    function getDomainName()           external view returns (string    );
-    function getDomainCode()           external view returns (TvmCell   );
-    //
-    function getEndpointAddress()      external view returns (address   );
-    function getSegmentsCount()        external view returns (uint8     );
-    function getParentDomainName()     external view returns (string    );
-    function getParentDomainAddress()  external view returns (address   );    
-    //
-    function getOwnerAddress()         external view returns (address   );
-    function getDtLastProlongation()   external view returns (uint32    );
-    function getDtExpires()            external view returns (uint32    );
-    function getRegistrationPrice()    external view returns (uint128   );
-    function getRegistrationType()     external view returns (REG_TYPE  );
-    function getLastRegResult()        external view returns (REG_RESULT);
-    function getComment()              external view returns (string    );
-    //
-    function getDtCreated()            external view returns (uint32    );
-    function getTotalOwnersNum()       external view returns (uint32    );
-    function getSubdomainRegAccepted() external view returns (uint32    );
-    function getSubdomainRegDenied()   external view returns (uint32    );
-    function getTotalFeesCollected()   external view returns (uint128   );
-    //
-    function canProlongate()           external view returns (bool      );
-    function isExpired()               external view returns (bool      );
-    //
+    function callWhois()           external view responsible returns (DnsWhois);
+    function getWhois()                        external view returns (DnsWhois);
+    function callEndpointAddress() external view responsible returns (address );
+    function  getEndpointAddress() external view             returns (address );
 
     //========================================
     //
@@ -157,12 +137,15 @@ interface IDnsRecord
     ///
     /// @param domainName   - sub-domain name;
     /// @param ownerAddress - address of a new owner;
+    /// @param payerAddress - address of a Multisig/payer contract;
     //
     function receiveRegistrationRequest(string domainName, address ownerAddress, address payerAddress) external responsible returns (REG_RESULT, address, address);
     
     /// @notice Callback received from parent domain with registration result;
     ///
-    /// @param result - registration result;
+    /// @param result       - registration result;
+    /// @param ownerAddress - address of a new owner;
+    /// @param payerAddress - address of a Multisig/payer contract;
     //
     function callbackOnRegistrationRequest(REG_RESULT result, address ownerAddress, address payerAddress) external;
 }

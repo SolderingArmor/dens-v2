@@ -1,4 +1,4 @@
-pragma ton-solidity >=0.38.2;
+pragma ton-solidity >=0.42.0;
 pragma AbiHeader time;
 pragma AbiHeader pubkey;
 pragma AbiHeader expire;
@@ -34,6 +34,7 @@ contract DnsRecord is DnsRecordBase
     constructor(address ownerAddress) public
     {
         require(ownerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
+        require(address(this).wid == 0,      ERROR_WORKCHAIN_NEEDS_TO_BE_0 );
 
         // _validateDomainName() is very expensive, can't do anything without tvm.accept() first;
         // if the deployment is done by internal message, tvm.accept() is not needed, but if
@@ -53,16 +54,20 @@ contract DnsRecord is DnsRecordBase
         _whoisInfo.registrationType           = REG_TYPE.DENY; //sanity
         _whoisInfo.dtCreated                  = now;
         _whoisInfo.dtExpires                  = 0; // sanity
-        
-        // Registering a new domain is the same as claiming the expired from this point:
-        _claimExpired(ownerAddress);
 
-        // TODO: do we need to call regular "claimExpired" if it's an internal message with value?
+        // If deployment was made via external message
+        if(msg.sender == addressZero)
+        {
+            _reserve();
 
-        // Return the change adter contructor is done;
-        _reserve();
-        address returnAddress = (msg.sender == addressZero ? ownerAddress : msg.sender);
-        returnAddress.transfer(0, false, 128);
+            // Registering a new domain is the same as claiming the expired from this point:
+            _claimExpired(ownerAddress);
+            ownerAddress.transfer(0, false, 128);
+        }
+        else if(msg.value > 0) // If deployment was done via internal message with value
+        {
+            claimExpired(ownerAddress);
+        }
     }
 
     //========================================
@@ -70,7 +75,7 @@ contract DnsRecord is DnsRecordBase
     function _claimExpired(address newOwnerAddress) internal
     {
         // if it is a ROOT domain name
-        if(_whoisInfo.segmentsCount == 1) 
+        if(_whoisInfo.segmentsCount == 1)
         {
             // Root domains won't need approval, internal callback right away
             _callbackOnRegistrationRequest(REG_RESULT.APPROVED, newOwnerAddress);
@@ -117,7 +122,6 @@ contract DnsRecord is DnsRecordBase
         (, string parentName) = _parseDomainName(domainName);
         require(parentName == _whoisInfo.domainName, ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN);
 
-
         //========================================
         // 3. Reserve minimum balance;
         _reserve();
@@ -153,7 +157,7 @@ contract DnsRecord is DnsRecordBase
         {
             // 1.
             _whoisInfo.subdomainRegAccepted += 1;
-            emit newSubdomainRegistered(now, domainName, 0);
+            emit newSubdomainRegistered(now, domainName, _whoisInfo.registrationPrice);
         }
         else if(result == REG_RESULT.DENIED)
         {
@@ -175,12 +179,6 @@ contract DnsRecord is DnsRecordBase
             _whoisInfo.ownerAddress    = ownerAddress;
             _whoisInfo.dtExpires       = (now + ninetyDays);
             _whoisInfo.totalOwnersNum += 1;
-        }
-        else if(result == REG_RESULT.DENIED || result == REG_RESULT.NOT_ENOUGH_MONEY)
-        {
-            // Domain ownership is reset
-            _whoisInfo.ownerAddress = addressZero;
-            _whoisInfo.dtExpires    = 0;
         }
     }
 
