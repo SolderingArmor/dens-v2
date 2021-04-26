@@ -665,6 +665,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         # Deny subdomain registration 
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
@@ -699,6 +700,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         # Claim
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_domaino.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["subdomainRegAccepted"], "1"       )
