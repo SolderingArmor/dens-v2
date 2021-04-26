@@ -60,6 +60,7 @@ interface IDnsRecord
     event newSubdomainRegistered(uint32 dt, string domainName, uint128 price       );
     event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress);
     event domainProlongated     (uint32 dt, uint32 expirationDate);
+    event ownerChanged          (uint32 dt, address oldOwner, address newOwner);
     event domainReleased        (uint32 dt);
 
     //========================================

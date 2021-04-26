@@ -131,6 +131,8 @@ abstract contract DnsRecordBase is IDnsRecord
         
         _reserve();
 
+        emit ownerChanged(now, _whoisInfo.ownerAddress, newOwnerAddress);
+
         _changeOwner(newOwnerAddress);
         _whoisInfo.totalOwnersNum += 1;
         msg.sender.transfer(0, false, 128);

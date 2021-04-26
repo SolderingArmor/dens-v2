@@ -648,6 +648,10 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         # Change owners 6 times
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
+        self.assertEqual(realExitCode, 100) # ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER
+
         result = self.domain_domaino.callFromMultisig(msig=self.msig2, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeOwner", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)

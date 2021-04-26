@@ -216,6 +216,16 @@
 			]
 		},
 		{
+			"name": "ownerChanged",
+			"inputs": [
+				{"name":"dt","type":"uint32"},
+				{"name":"oldOwner","type":"address"},
+				{"name":"newOwner","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "domainReleased",
 			"inputs": [
 				{"name":"dt","type":"uint32"}
