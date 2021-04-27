@@ -73,7 +73,7 @@ abstract contract DnsRecordBase is IDnsRecord
 
         // When we deploy via new from another contract, "address(this).balance" shows 0 even if we have "msg.value"; 
         // this is a workaround;
-        require(address(this).balance > balance || (address(this).balance == 0 && msg.value > balance), ERROR_NOT_ENOUGH_MONEY);
+        require(address(this).balance > balance || msg.value > balance, ERROR_NOT_ENOUGH_MONEY);
         
         // Reserve exactly minimum balance;
         tvm.rawReserve(balance, 0);
