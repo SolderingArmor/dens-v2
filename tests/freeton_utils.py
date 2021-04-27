@@ -291,7 +291,7 @@ def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
     # TODO: temporary fix, to exclude EVENT from calculations for now
     messageFilters     = "id, src, dst, body, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
     messageFiltersFix  = "id, src, dst, body, dst_transaction{id}, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
-    transactionFilters = "out_msgs, outmsg_cnt, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
+    transactionFilters = "status, status_name, end_status, out_msgs, outmsg_cnt, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
 
     resultMsg = getMessageGraphQL(messageID, messageFilters)
     if resultMsg == "":
