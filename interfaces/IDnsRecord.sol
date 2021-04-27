@@ -59,8 +59,8 @@ interface IDnsRecord
     // Events
     event newSubdomainRegistered(uint32 dt, string domainName, uint128 price       );
     event registrationResult    (uint32 dt, REG_RESULT result, address ownerAddress);
-    event domainProlongated     (uint32 dt, uint32 expirationDate);
     event ownerChanged          (uint32 dt, address oldOwner, address newOwner);
+    event domainProlongated     (uint32 dt, uint32 expirationDate);
     event domainReleased        (uint32 dt);
 
     //========================================
@@ -89,7 +89,7 @@ interface IDnsRecord
     /// @notice Change the owner;
     ///         Resets some DNS values like endpointAddress, registrationType, comment, etc.;
     ///
-    /// @param newOwnerAddress - address of a new owner; CAN'T be (0, 0);
+    /// @param newOwnerAddress - address of a new owner; can't be zero;
     //
     function changeOwner(address newOwnerAddress) external;
     

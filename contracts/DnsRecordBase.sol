@@ -70,7 +70,11 @@ abstract contract DnsRecordBase is IDnsRecord
     function _reserve() internal view
     {
         uint128 balance = gasToValue(500000, 0);
-        require(address(this).balance > balance, ERROR_NOT_ENOUGH_MONEY);
+
+        // When we deploy via new from another contract, "address(this).balance" shows 0 even if we have "msg.value"; 
+        // this is a workaround;
+        require(address(this).balance > balance || (address(this).balance == 0 && msg.value > balance), ERROR_NOT_ENOUGH_MONEY);
+        
         // Reserve exactly minimum balance;
         tvm.rawReserve(balance, 0);
     }

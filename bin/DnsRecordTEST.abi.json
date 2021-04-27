@@ -207,20 +207,20 @@
 			]
 		},
 		{
-			"name": "domainProlongated",
-			"inputs": [
-				{"name":"dt","type":"uint32"},
-				{"name":"expirationDate","type":"uint32"}
-			],
-			"outputs": [
-			]
-		},
-		{
 			"name": "ownerChanged",
 			"inputs": [
 				{"name":"dt","type":"uint32"},
 				{"name":"oldOwner","type":"address"},
 				{"name":"newOwner","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "domainProlongated",
+			"inputs": [
+				{"name":"dt","type":"uint32"},
+				{"name":"expirationDate","type":"uint32"}
 			],
 			"outputs": [
 			]
