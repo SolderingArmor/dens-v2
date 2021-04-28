@@ -31,7 +31,7 @@ contract DnsRecord is DnsRecordBase
     //
     /// @dev we still need address and pubkey here in constructor, because root level domains are registerd right away;
     //
-    constructor(address ownerAddress) public
+    constructor(address ownerAddress, bool forceFeeReturnToOwner) public
     {
         require(ownerAddress != addressZero, ERROR_ADDRESS_CAN_NOT_BE_EMPTY);
         require(address(this).wid == 0,      ERROR_WORKCHAIN_NEEDS_TO_BE_0 );
@@ -66,7 +66,7 @@ contract DnsRecord is DnsRecordBase
         }
         else if(msg.value > 0) // If deployment was done via internal message with value
         {
-            claimExpired(ownerAddress);
+            claimExpired(ownerAddress, forceFeeReturnToOwner);
         }
     }
 
@@ -82,7 +82,7 @@ contract DnsRecord is DnsRecordBase
         }
     }
     
-    function claimExpired(address newOwnerAddress) public override Expired NameIsValid
+    function claimExpired(address newOwnerAddress, bool forceFeeReturnToOwner) public override Expired NameIsValid
     {
         require(msg.pubkey() == 0 && msg.sender != addressZero && msg.value > 0, ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE);
 
@@ -94,15 +94,15 @@ contract DnsRecord is DnsRecordBase
 
         if(_whoisInfo.segmentsCount > 1)
         {
-            _sendRegistrationRequest(newOwnerAddress);
+            _sendRegistrationRequest(newOwnerAddress, forceFeeReturnToOwner);
         }
     }
 
     //========================================
     //
-    function _sendRegistrationRequest(address newOwnerAddress) internal view
+    function _sendRegistrationRequest(address newOwnerAddress, bool forceFeeReturnToOwner) internal view
     {
-        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 128}(_domainName, newOwnerAddress, msg.sender);
+        IDnsRecord(_whoisInfo.parentDomainAddress).receiveRegistrationRequest{value: 0, callback: IDnsRecord.callbackOnRegistrationRequest, flag: 128}(_domainName, newOwnerAddress, forceFeeReturnToOwner ? addressZero : msg.sender);
     }
     
     //========================================
@@ -197,8 +197,16 @@ contract DnsRecord is DnsRecordBase
             _callbackOnRegistrationRequest(result, ownerAddress);
         }
 
-        // Return all remaining change to payer;
-        payerAddress.transfer(0, false, 128);
+        if(payerAddress != addressZero)
+        {
+            // Return all remaining change to payer;
+            payerAddress.transfer(0, false, 128);
+        }
+        else 
+        {
+            // Return all remaining change to potential owner;
+            ownerAddress.transfer(0, false, 128);
+        }
     }
 }
 

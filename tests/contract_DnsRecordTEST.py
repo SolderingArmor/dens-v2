@@ -15,9 +15,11 @@ class DnsRecordTEST(object):
         self.INITDATA    = {"_domainName":stringToHex(name),"_domainCode": self.CODE}
         self.PUBKEY      = ZERO_PUBKEY
         self.ADDRESS     = getAddressZeroPubkey(abiPath=self.ABI, tvcPath=self.TVC, initialData=self.INITDATA)
+        self.NAME        = name
+        self.NAME_HEX    = stringToHex(name)
 
-    def deploy(self, ownerAddress: str):
-        self.CONSTRUCTOR = {"ownerAddress": ownerAddress}
+    def deploy(self, ownerAddress: str, forceFeeReturnToOwner: bool = False):
+        self.CONSTRUCTOR = {"ownerAddress": ownerAddress, "forceFeeReturnToOwner":forceFeeReturnToOwner}
         result = deployContract(abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
         return result
 

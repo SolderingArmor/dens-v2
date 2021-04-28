@@ -126,9 +126,10 @@ interface IDnsRecord
     ///      registration price (is 0 if REG_TYPE != MONEY) + all child fees (equivalent of 100'000 gas, or 0.1 TON should be enough) + all parent fees (equivalent of 300'000 gas, or 0.3 TON should be enough);
     ///      Long story short: extra 0.5 TON will cover everything, the change will be sent back;
     ///
-    /// @param newOwnerAddress - address or pubkey  of a new owner; can be 0;
+    /// @param newOwnerAddress       - address or pubkey  of a new owner; can be 0;
+    /// @param forceFeeReturnToOwner - sedns registration fees change not to "msg.sender", but to "ownerAddress"; mandatory for DeBot deployment, optional for all other ways of deployment;
     //
-    function claimExpired(address newOwnerAddress) external;
+    function claimExpired(address newOwnerAddress, bool forceFeeReturnToOwner) external;
     
     /// @notice Release a domain, owner becomes no one, dtExpires becomes 0;
     //
