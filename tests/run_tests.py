@@ -311,6 +311,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
 
         result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_net_kek.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["ownerAddress"], self.msig2.ADDRESS)

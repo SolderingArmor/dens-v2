@@ -154,3 +154,174 @@ interface IDnsRecord
 
 //================================================================================
 //
+abstract contract DnsFunctionsCommon
+{
+    //========================================
+    // Constants
+    address constant addressZero = address.makeAddrStd(0, 0); //
+    uint32  constant tenDays     = 60 * 60 * 24 * 10;         // 10 days in seconds
+    uint32  constant ninetyDays  = tenDays * 9;               // 90 days in seconds
+
+    uint32  constant MAX_SEGMENTS_NUMBER   = 4;
+    uint32  constant MAX_SEPARATORS_NUMBER = (MAX_SEGMENTS_NUMBER - 1);
+    uint32  constant MIN_SEGMENTS_LENGTH   = 2;
+    uint32  constant MAX_SEGMENTS_LENGTH   = 31;
+    uint32  constant MAX_DOMAIN_LENGTH     = MAX_SEGMENTS_NUMBER * MAX_SEGMENTS_LENGTH + MAX_SEPARATORS_NUMBER;
+
+    //========================================
+    // Error codes
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER      = 100;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_ROOT       = 101;
+    uint constant ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE = 102;
+    uint constant ERROR_WORKCHAIN_NEEDS_TO_BE_0             = 103;
+    uint constant ERROR_DOMAIN_NAME_NOT_VALID               = 200;
+    uint constant ERROR_DOMAIN_IS_EXPIRED                   = 201;
+    uint constant ERROR_DOMAIN_IS_NOT_EXPIRED               = 202;
+    uint constant ERROR_DOMAIN_IS_PENDING                   = 203;
+    uint constant ERROR_DOMAIN_IS_NOT_PENDING               = 204;
+    uint constant ERROR_CAN_NOT_PROLONGATE_YET              = 205;
+    uint constant ERROR_WRONG_REGISTRATION_TYPE             = 206;
+    uint constant ERROR_DOMAIN_REG_REQUEST_DOES_NOT_EXIST   = 207;
+    uint constant ERROR_DOMAIN_REG_REQUEST_ALREADY_EXISTS   = 208;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_MY_SUBDOMAIN  = 209;
+    uint constant ERROR_MESSAGE_SENDER_IS_NOT_VALID         = 210;
+    uint constant ERROR_NOT_ENOUGH_MONEY                    = 211;
+    uint constant ERROR_ADDRESS_CAN_NOT_BE_EMPTY            = 212;
+    uint constant ERROR_CAN_NOT_TRANSFER_TO_YOURSELF        = 213;
+    
+    //========================================
+    /// @notice Split the string using "/" as a separator;
+    /// @dev    We purposely use "byteLength()" because we know that all letters will be in a range of a single byte;
+    ///
+    /// @param stringToSplit - string to split;
+    ///
+    /// @return string[]: string array (segments);
+    //
+    function splitString(string stringToSplit) internal pure returns(string[]) 
+    {
+        require(stringToSplit.byteLength() >= MIN_SEGMENTS_LENGTH && stringToSplit.byteLength() <= MAX_DOMAIN_LENGTH, ERROR_DOMAIN_NAME_NOT_VALID);
+        
+        bytes stringToSplitBytes = bytes(stringToSplit);
+        string[] finalWordsArray;        
+        
+        uint lastPos = 0;
+        for(uint i = 0; i < stringToSplitBytes.length; i++) 
+        {
+            byte letter = stringToSplitBytes[i];
+            if(letter == 0x2F) // slash
+            {
+                if(i - lastPos > 0) // don't add empty strings; we ignore errors here because "_validateDomainName" will take care of it;
+                {
+                    finalWordsArray.push(stringToSplit.substr(lastPos, i - lastPos));
+                }
+                lastPos = i + 1;
+            }
+        }
+
+        // Add last word
+        if(stringToSplitBytes.length - lastPos > 0)
+        {
+            finalWordsArray.push(stringToSplit.substr(lastPos, stringToSplitBytes.length - lastPos - 1));
+        }
+
+        return finalWordsArray;
+    }
+
+    //========================================
+    /// @notice Validate domain segment length;
+    ///
+    /// @param length - segment length without separators;
+    ///
+    /// @return bool: if length is valid or not;
+    //
+    function _validateSegmentLength(uint32 length) internal inline pure returns (bool)
+    {
+        // segment too short or too long, or two "/" in a row, error;
+        return (length >= MIN_SEGMENTS_LENGTH && length <= MAX_SEGMENTS_LENGTH);
+    }
+
+    //========================================
+    /// @notice Validate domain name;
+    ///
+    /// @param domainName - domain name; can include lowercase letters, numbers and "/";
+    ///
+    /// @return bool: if the name is valid or not;
+    //
+    function _validateDomainName(bytes domainName) internal pure returns (bool)
+    {
+        if(domainName.length < MIN_SEGMENTS_LENGTH || domainName.length > MAX_DOMAIN_LENGTH)
+        {
+            return false;
+        }
+
+        uint32 separatorCount   = 0;
+        uint32 lastSeparatorPos = 0;
+
+        for(uint32 i = 0; i < domainName.length; i++)
+        {
+            byte  letter  = domainName[i];
+            bool  numbers = (letter >= 0x30 && letter <= 0x39);
+            bool  lower   = (letter >= 0x61 && letter <= 0x7A);
+            bool  dash    = (letter == 0x2D);
+            bool  slash   = (letter == 0x2F);
+
+            if(!numbers && !lower && !dash && !slash)
+            {
+                return false;
+            }
+
+            if(slash)
+            {
+                separatorCount += 1;
+                uint32 len = i - lastSeparatorPos;
+                
+                // One symbol in this length is separator itself, get rid of it (only if we had one or more separators already);
+                uint32 extraSlash = (lastSeparatorPos == 0 ? 0 : 1);
+                if(len == 0 || !_validateSegmentLength(len - extraSlash)) {    return false;    }
+
+                lastSeparatorPos = i;
+            }
+        }
+
+        // last segment has no separator at the end, duplicate the check
+        uint32 extraSlash = (lastSeparatorPos == 0 ? 0 : 1);
+        uint32 len        = uint32(domainName.length) - lastSeparatorPos - extraSlash;
+        if(!_validateSegmentLength(len)) {    return false;    }
+
+        if(separatorCount > MAX_SEPARATORS_NUMBER)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    //========================================
+    /// @notice Parse domain name and extract segments and parent domain name; 
+    ///         Don't forget to validate domain first (if needed)!
+    ///
+    /// @param domainName - domain name;
+    ///
+    /// @return string[]: parsed domain name (segments);
+    ///         string:   parent domain name;
+    //
+    function _parseDomainName(string domainName) internal pure returns (string[], string)
+    {
+        // Parse to segments
+        string[] segments = splitString(domainName);
+        if(segments.length == 0)
+        {
+            return(segments, "");
+        }
+        
+        uint32 lastSegmentName = uint32(segments[segments.length-1].byteLength());
+        uint32 parentLength    = uint32(domainName.byteLength()) - lastSegmentName - 1;
+        string parentName      = (segments.length == 1 ? domainName : domainName.substr(0, parentLength - 1));
+
+        return (segments, parentName);
+    }
+}
+
+
+//================================================================================
+//
