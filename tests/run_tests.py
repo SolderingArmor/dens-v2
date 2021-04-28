@@ -8,7 +8,9 @@ import unittest
 import time
 import sys
 from   pprint import pprint
-from   contract_DnsRecordTEST import DnsRecordTEST
+from   contract_DnsRecord         import DnsRecord
+from   contract_DnsRecordTEST     import DnsRecordTEST
+from   contract_DnsRecordDeployer import DnsRecordDeployer
 
 TON = 1000000000
 
@@ -40,7 +42,7 @@ for _, arg in enumerate(sys.argv[1:]):
 # EXIT CODE FOR SINGLE-MESSAGE OPERATIONS
 # we know we have only 1 internal message, that's why this wrapper has no filters
 def _getAbiArray():
-    return ["../bin/DnsRecordTEST.abi.json", "../bin/SetcodeMultisigWallet.abi.json"]
+    return ["../bin/DnsRecordTEST.abi.json", "../bin/SetcodeMultisigWallet.abi.json", "../bin/DnsRecordDeployer.abi.json"]
 
 def _getExitCode(msgIdArray):
     abiArray     = _getAbiArray()
@@ -307,7 +309,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
         result = self.domain_net.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["registrationType"], "0")
 
-        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         result = self.domain_net_kek.run(functionName="getWhois", functionParams={})
@@ -375,7 +377,7 @@ class Test_06_ClaimMoney(unittest.TestCase):
         balanceBefore = int(result["balance"])
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=700000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Include all the fees into calculation (when multisig receives transfer it pays fees too)
@@ -448,7 +450,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Claim witn msig2 owner (wrong)
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -457,7 +459,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
                 self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "2") # DENIED
 
         # Claim with right owner
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig1.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig1.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -533,7 +535,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         result = self.domain_net.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["registrationType"], "3")
 
-        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
@@ -586,7 +588,7 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
 
     # 4. Claim
     def test_4(self):
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig.ADDRESS}, value=100000000, flags=1)
+        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check onBounce/aborted
@@ -671,7 +673,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
@@ -692,7 +694,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # We try to include less money than price
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
@@ -702,7 +704,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
                 self.assertEqual(regResult, "3") # NOT_ENOUGH_MONEY
 
         # Claim
-        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=700000000, flags=1)
+        result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
@@ -857,7 +859,7 @@ class Test_13_ClaimAlreadyClaimed(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Try to claim from other multisig
-        result = self.domain.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=100000000, flags=1)
+        result = self.domain.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, 202) # ERROR_DOMAIN_IS_NOT_EXPIRED
 
@@ -936,7 +938,7 @@ class Test_14_LongestName(unittest.TestCase):
         self.assertEqual(realExitCode, 0)
 
         # 2
-        result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS}, value=TON, flags=1)
+        result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
@@ -948,7 +950,7 @@ class Test_14_LongestName(unittest.TestCase):
         self.assertEqual(realExitCode, 0)
 
         # 3
-        result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig3.ADDRESS}, value=TON, flags=1)
+        result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig3.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
@@ -960,7 +962,7 @@ class Test_14_LongestName(unittest.TestCase):
         self.assertEqual(realExitCode, 0)
 
         # 4
-        result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig4.ADDRESS}, value=TON, flags=1)
+        result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig4.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
 
@@ -1019,7 +1021,7 @@ class Test_15_ClaimInvalid(unittest.TestCase):
 
     # 4. Try prolongate
     def test_4(self):
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig.ADDRESS}, value=100000000, flags=1)
+        result = self.domain.callFromMultisig(msig=self.msig, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         realExitCode = _getExitCode(msgIdArray=result[0].transaction["out_msgs"])
         self.assertEqual(realExitCode, -10) # -10, we didn't even start checking modifiers
         
@@ -1031,6 +1033,72 @@ class Test_15_ClaimInvalid(unittest.TestCase):
         result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
         self.assertEqual(result[1]["errorCode"], 0)
 
+# ==============================================================================
+#
+class Test_16_DeployFromDeployer(unittest.TestCase):
+    
+    domain    = DnsRecordTEST(name = "nettop")
+    domain2   = DnsRecordTEST(name = "nettop/child")
+    msig      = SetcodeMultisig()
+    deployer  = DnsRecordDeployer()
+    
+    def test_0(self):
+        print("\n\n----------------------------------------------------------------------")
+        print("Running:", self.__class__.__name__)
+
+    # 1. Giver
+    def test_1(self):
+        giverGive(self.domain.ADDRESS,   TON * 1)
+        giverGive(self.deployer.ADDRESS, TON * 1)
+        giverGive(self.msig.ADDRESS,     TON * 5)
+        
+    # 2. Deploy multisig and deployer
+    def test_2(self):
+        result = self.msig.deploy()
+        self.assertEqual(result[1]["errorCode"], 0)
+
+        result = self.deployer.deploy()
+        #self.assertEqual(result[1]["errorCode"], 0)
+        
+    # 3. Deploy "net"
+    def test_3(self):
+        result = self.deployer.callFromMultisig(msig=self.msig, functionName="deploy", functionParams={"domainName":self.domain.NAME_HEX, "ownerAddress":self.msig.ADDRESS}, value=TON*2, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.domain.callFromMultisig(msig=self.msig, functionName="changeRegistrationType", functionParams={"newType":0}, value=100000000, flags=0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.deployer.callFromMultisig(msig=self.msig, functionName="deploy", functionParams={"domainName":self.domain2.NAME_HEX, "ownerAddress":self.msig.ADDRESS}, value=TON*2, flags=1)
+        self.assertEqual(result[1]["errorCode"], 0)
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+    # 4. Call change endpoint from multisig
+    def test_4(self):
+        endpoint = "0:78bf2beea2cd6ff9c78b0aca30e00fa627984dc01ad0351915002051d425f1e4"
+        result = self.domain.callFromMultisig(msig=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpoint}, value=100000000, flags=0)
+        self.assertEqual(result[1]["errorCode"], 0)
+
+        result = self.domain.run(functionName="getEndpointAddress", functionParams={})
+        self.assertEqual(result, endpoint)
+
+        endpoint = "0:78bf2beea2cd6ff9c78b0aca30e00fa627984dc01ad0351915002051d425f1e4"
+        result = self.domain2.callFromMultisig(msig=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpoint}, value=100000000, flags=0)
+        self.assertEqual(result[1]["errorCode"], 0)
+
+        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+
+        result = self.domain2.run(functionName="getEndpointAddress", functionParams={})
+        self.assertEqual(result, endpoint)
+
+    # 5. Cleanup
+    def test_5(self):
+        result = self.domain.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.domain2.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
+        result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
+        self.assertEqual(result[1]["errorCode"], 0)
 
 # ==============================================================================
 # 
