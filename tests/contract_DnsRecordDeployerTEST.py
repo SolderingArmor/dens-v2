@@ -5,12 +5,12 @@
 import freeton_utils
 from   freeton_utils import *
 
-class DnsRecordDeployer(object):
+class DnsRecordDeployerTEST(object):
     def __init__(self, signer: Signer = None):
         self.SIGNER      = generateSigner() if signer is None else signer
-        self.ABI         = "../bin/DnsRecordDeployer.abi.json"
-        self.TVC         = "../bin/DnsRecordDeployer.tvc"
-        self.CODE        = getCodeFromTvc("../bin/DnsRecord.tvc")
+        self.ABI         = "../bin/DnsRecordDeployerTEST.abi.json"
+        self.TVC         = "../bin/DnsRecordDeployerTEST.tvc"
+        self.CODE        = getCodeFromTvc("../bin/DnsRecordTEST.tvc")
         self.CONSTRUCTOR = {}
         self.INITDATA    = {"_domainCode": self.CODE}
         self.PUBKEY      = ZERO_PUBKEY
