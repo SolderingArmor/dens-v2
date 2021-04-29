@@ -8,9 +8,9 @@ import unittest
 import time
 import sys
 from   pprint import pprint
-from   contract_DnsRecord         import DnsRecord
-from   contract_DnsRecordTEST     import DnsRecordTEST
-from   contract_DnsRecordDeployer import DnsRecordDeployer
+from   contract_DnsRecord             import DnsRecord
+from   contract_DnsRecordTEST         import DnsRecordTEST
+from   contract_DnsRecordDeployerTEST import DnsRecordDeployerTEST
 
 TON = 1000000000
 
@@ -1041,7 +1041,7 @@ class Test_16_DeployFromDeployer(unittest.TestCase):
     domain    = DnsRecordTEST(name = "nettop")
     domain2   = DnsRecordTEST(name = "nettop/child")
     msig      = SetcodeMultisig()
-    deployer  = DnsRecordDeployer()
+    deployer  = DnsRecordDeployerTEST()
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
