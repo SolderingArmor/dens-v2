@@ -11,7 +11,8 @@
 			]
 		},
 		{
-			"name": "getInfo",
+			"name": "getDebotInfo",
+			"id": "0xDEB",
 			"inputs": [
 			],
 			"outputs": [
@@ -22,7 +23,9 @@
 				{"name":"author","type":"bytes"},
 				{"name":"support","type":"address"},
 				{"name":"hello","type":"bytes"},
-				{"name":"language","type":"bytes"}
+				{"name":"language","type":"bytes"},
+				{"name":"dabi","type":"bytes"},
+				{"name":"icon","type":"bytes"}
 			]
 		},
 		{

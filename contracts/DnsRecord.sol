@@ -92,9 +92,14 @@ contract DnsRecord is DnsRecordBase
         _changeOwner(addressZero);
         _claimExpired(newOwnerAddress);
 
+        // If segments are 2+ we send all value to parent domain, which will return everything later
         if(_whoisInfo.segmentsCount > 1)
         {
             _sendRegistrationRequest(newOwnerAddress, forceFeeReturnToOwner);
+        }
+        else // if it is a top level domain, return the change right away
+        {
+            address(forceFeeReturnToOwner ? newOwnerAddress : msg.sender).transfer(0, false, 128);
         }
     }
 

@@ -85,16 +85,20 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
 
     //========================================
     //
-    function getInfo() public pure returns (string name, string version, string publisher, string key, string author, address support, string hello, string language) {
+    function getDebotInfo() public functionID(0xDEB) view returns(string name,     string version, string publisher, string key,  string author,
+                                                                  address support, string hello,   string language,  string dabi, bytes icon)
+    {
         name      = "DnsDeBot";
         version   = "0.1.0";
-        publisher = "Augual.Team";
+        publisher = "Augual.TEAM";
         key       = "DeBot for Augual.DeNS";
-        author    = "Augual.Team";
+        author    = "Augual.TEAM";
         support   = addressZero;
-        hello     = "Welcome to DeNS DeBot (TEST)!";
+        hello     = "Welcome to DeNS DeBot!";
         language  = "en";
-    }    
+        dabi      = m_debotAbi.hasValue() ? m_debotAbi.get() : "";
+        icon      = "";
+    }
 
     //========================================
     /// @notice Define DeBot version and title here.
@@ -127,7 +131,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     function mainMenu() public 
     {
         _eraseCtx();
-        Terminal.input(tvm.functionId(onPathEnter), "Enter DeNS string", false);
+        Terminal.input(tvm.functionId(onPathEnter), "Enter DeNS string:", false);
     }
 
     //========================================
@@ -174,6 +178,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
           body);
 
         Terminal.print(0, "Claim requested!");
+        Terminal.print(0, "Please give it ~10 seconds to process and then reload whois to get latest domain information.\n");
         onPathEnter(ctx_name);
     }        
 
