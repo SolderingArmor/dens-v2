@@ -1,0 +1,264 @@
+{
+	"ABI version": 2,
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "getRequiredInterfaces",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"interfaces","type":"uint256[]"}
+			]
+		},
+		{
+			"name": "getInfo",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"name","type":"bytes"},
+				{"name":"version","type":"bytes"},
+				{"name":"publisher","type":"bytes"},
+				{"name":"key","type":"bytes"},
+				{"name":"author","type":"bytes"},
+				{"name":"support","type":"address"},
+				{"name":"hello","type":"bytes"},
+				{"name":"language","type":"bytes"}
+			]
+		},
+		{
+			"name": "getVersion",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"name","type":"bytes"},
+				{"name":"semver","type":"uint24"}
+			]
+		},
+		{
+			"name": "start",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "mainMenu",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onMsigEnter",
+			"inputs": [
+				{"name":"value","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onMsigEnter_2",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "deploy",
+			"inputs": [
+				{"name":"domainName","type":"bytes"},
+				{"name":"ownerAddress","type":"address"}
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
+			]
+		},
+		{
+			"name": "onDeploySuccess",
+			"inputs": [
+				{"name":"value","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onError",
+			"inputs": [
+				{"name":"sdkError","type":"uint32"},
+				{"name":"exitCode","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onPathEnter",
+			"inputs": [
+				{"name":"value","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onAddressCheck",
+			"inputs": [
+				{"name":"acc_type","type":"int8"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onFree",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onWhoIs",
+			"inputs": [
+				{"components":[{"name":"endpointAddress","type":"address"},{"name":"segmentsCount","type":"uint8"},{"name":"domainName","type":"bytes"},{"name":"parentDomainName","type":"bytes"},{"name":"parentDomainAddress","type":"address"},{"name":"ownerAddress","type":"address"},{"name":"dtLastProlongation","type":"uint32"},{"name":"dtExpires","type":"uint32"},{"name":"registrationPrice","type":"uint128"},{"name":"registrationType","type":"uint8"},{"name":"lastRegResult","type":"uint8"},{"name":"comment","type":"bytes"},{"name":"dtCreated","type":"uint32"},{"name":"totalOwnersNum","type":"uint128"},{"name":"subdomainRegAccepted","type":"uint128"},{"name":"subdomainRegDenied","type":"uint128"},{"name":"totalFeesCollected","type":"uint128"}],"name":"_whoisInfo","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onActive",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onExpired",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "manageMenu",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeEndpoint",
+			"inputs": [
+				{"name":"value","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeOwner",
+			"inputs": [
+				{"name":"value","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeRegType",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangePrice",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeComment",
+			"inputs": [
+				{"name":"value","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onClaimExpired",
+			"inputs": [
+				{"name":"value","type":"int256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "_calculateDomainAddress",
+			"inputs": [
+				{"name":"domainName","type":"bytes"}
+			],
+			"outputs": [
+				{"name":"value0","type":"address"},
+				{"name":"value1","type":"cell"}
+			]
+		},
+		{
+			"name": "canProlongate",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "isExpired",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"bool"}
+			]
+		},
+		{
+			"name": "upgrade",
+			"inputs": [
+				{"name":"state","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "getDebotOptions",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"options","type":"uint8"},
+				{"name":"debotAbi","type":"bytes"},
+				{"name":"targetAbi","type":"bytes"},
+				{"name":"targetAddr","type":"address"}
+			]
+		},
+		{
+			"name": "setABI",
+			"inputs": [
+				{"name":"dabi","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		}
+	],
+	"data": [
+		{"key":1,"name":"_domainCode","type":"cell"}
+	],
+	"events": [
+	]
+}

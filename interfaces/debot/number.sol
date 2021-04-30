@@ -5,23 +5,23 @@ pragma AbiHeader expire;
 
 //================================================================================
 //
-interface IAddressInput 
+interface INumberInput 
 {
-	function get(uint32 answerId, string prompt) external returns (address value);
+	function get(uint32 answerId, string prompt, int256 min, int256 max) external returns (int256 value);
 }
 
 //================================================================================
 //
-library AddressInput 
+library NumberInput 
 {
-    uint256 constant ID       = 0xd7ed1bd8e6230871116f4522e58df0a93c5520c56f4ade23ef3d8919a984653b;
+    uint256 constant ID       = 0xc5a9558b2664aed7dc3e6123436d544f13ffe69ab0e259412f48c6d1c8588401;
     int8    constant DEBOT_WC = -31;
     address constant addr     = address.makeAddrStd(DEBOT_WC, ID);
 
-    function get(uint32 answerId, string prompt) public pure 
+    function get(uint32 answerId, string prompt, int256 min, int256 max) public pure
     {
-        IAddressInput(addr).get(answerId, prompt);
-    }
+		INumberInput(addr).get(answerId, prompt, min, max);
+	}
 }
 
 //================================================================================
