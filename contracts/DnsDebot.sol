@@ -16,6 +16,7 @@ import "../interfaces/IDnsRecord.sol";
 import "../interfaces/IDebot.sol";
 import "../interfaces/debot/address.sol";
 import "../interfaces/debot/amount.sol";
+import "../interfaces/debot/menu.sol";
 import "../interfaces/debot/number.sol";
 import "../interfaces/debot/sdk.sol";
 import "../interfaces/debot/terminal.sol";
@@ -81,7 +82,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     //
 	function getRequiredInterfaces() public pure returns (uint256[] interfaces) 
     {
-        return [Terminal.ID, AddressInput.ID, NumberInput.ID, AmountInput.ID];
+        return [Terminal.ID, AddressInput.ID, NumberInput.ID, AmountInput.ID, Menu.ID];
 	}
 
     //========================================
@@ -124,14 +125,15 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     /// @notice Entry point function for DeBot.    
     function start() public override 
     {
-        mainMenu();
+        mainMenu(0);
     }
 
     //========================================
     //
-    function mainMenu() public 
+    function mainMenu(uint32 index) public 
     {
         _eraseCtx();
+        index = 0; // shut a warning
         Terminal.input(tvm.functionId(onPathEnter), "Enter DeNS string:", false);
     }
 
@@ -146,16 +148,16 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
 
         if(ctx_accState == -1 || ctx_accState == 0)
         {
-            AmountInput.get(tvm.functionId(onFree), "Enter amount: ", 9, 0, 999999999999999);
+            AmountInput.get(tvm.functionId(onMsigEnter_2), "Enter amount: ", 9, 0, 999999999999999);
         }
         else if(now > ctx_whois.dtExpires)
         {
-            AmountInput.get(tvm.functionId(onFree), "Enter amount: ", 9, 0, 999999999999999);
+            AmountInput.get(tvm.functionId(onClaimExpired), "Enter amount: ", 9, 0, 999999999999999);
         }
         else 
         {
             // We actually caan't get here
-            mainMenu();
+            
         }
     }
 
@@ -201,7 +203,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     {
         address domainAddr = value;
         Terminal.print(0, format("Domain address: 0:{:x}", domainAddr.value)); 
-        mainMenu(); 
+        mainMenu(0); 
     }    
 
     //========================================
@@ -209,7 +211,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     function onError(uint32 sdkError, uint32 exitCode) public 
     {
         Terminal.print(0, format("Failed! SDK Error: {}. Exit Code: {}", sdkError, exitCode));
-        mainMenu(); 
+        mainMenu(0); 
     }    
  
     //========================================
@@ -224,7 +226,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
             Terminal.print(0, " > Each segment can have only numbers, dash \"-\" and lowercase letters;");
             Terminal.print(0, " > Segment separator is shash \"/\";\n");
 
-            mainMenu();
+            mainMenu(0);
             return;
         }
 
@@ -249,10 +251,10 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         ctx_accState = acc_type;
         if (ctx_accState == -1 || ctx_accState == 0) 
         {
-            Terminal.print(0, format("Domain ({}) is FREE", ctx_name));
-            Terminal.print(0, "1)    [Deploy and claim domain]"); 
-            Terminal.print(0, "2)    [Enter another DeNS name]");
-            AmountInput.get(tvm.functionId(onFree), "Enter your choice: ", 0, 1, 2);
+            MenuItem[] mi;
+            mi.push(MenuItem("Deploy and claim domain", "", tvm.functionId(onFree)  ));
+            mi.push(MenuItem("Enter another DeNS name", "", tvm.functionId(mainMenu)));
+            Menu.select("Enter your choice: ", "", mi);
         }
         else if (ctx_accState == 1)
         {
@@ -271,22 +273,16 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         else if (ctx_accState == 2)
         {
             Terminal.print(0, format("Domain ({}) is FROZEN", ctx_name));
-            mainMenu(); 
+            mainMenu(0); 
         }
     } 
 
     //========================================
     //
-    function onFree(int256 value) public
+    function onFree(uint32 index) public
     {
-        if(value == 1)
-        {
-            AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner wallet: ");  
-        }
-        else
-        {        
-            mainMenu();
-        }
+        index = 0; // shut a warning
+        AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner wallet: ");
     }   
 
     //========================================
@@ -341,7 +337,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         }
         if(value == 3)
         {
-            mainMenu();
+            mainMenu(0);
             return;
         }
   
@@ -370,7 +366,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         }
         if(value == 3)
         {
-            mainMenu();
+            mainMenu(0);
             return;
         }
         
@@ -398,7 +394,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         }
         else
         {
-            mainMenu();
+            mainMenu(0);
         }                                
     }    
 
