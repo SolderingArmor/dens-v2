@@ -14,10 +14,11 @@ pragma AbiHeader expire;
 import "../contracts/DnsRecord.sol";
 import "../interfaces/IDnsRecord.sol";
 import "../interfaces/IDebot.sol";
+import "../interfaces/debot/address.sol";
+import "../interfaces/debot/amount.sol";
+import "../interfaces/debot/number.sol";
 import "../interfaces/debot/sdk.sol";
 import "../interfaces/debot/terminal.sol";
-import "../interfaces/debot/address.sol";
-import "../interfaces/debot/number.sol";
 
 //================================================================================
 //
@@ -80,7 +81,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     //
 	function getRequiredInterfaces() public pure returns (uint256[] interfaces) 
     {
-        return [Terminal.ID, AddressInput.ID, NumberInput.ID];
+        return [Terminal.ID, AddressInput.ID, NumberInput.ID, AmountInput.ID];
 	}
 
     //========================================
@@ -145,11 +146,11 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
 
         if(ctx_accState == -1 || ctx_accState == 0)
         {
-            NumberInput.get(tvm.functionId(onMsigEnter_2), "Enter amount: ", 0, 999999999999999);
+            AmountInput.get(tvm.functionId(onFree), "Enter amount: ", 9, 0, 999999999999999);
         }
         else if(now > ctx_whois.dtExpires)
         {
-            NumberInput.get(tvm.functionId(onClaimExpired), "Enter amount: ", 0, 999999999999999);
+            AmountInput.get(tvm.functionId(onFree), "Enter amount: ", 9, 0, 999999999999999);
         }
         else 
         {
@@ -250,8 +251,8 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         {
             Terminal.print(0, format("Domain ({}) is FREE", ctx_name));
             Terminal.print(0, "1)    [Deploy and claim domain]"); 
-            Terminal.print(0, "2)    [Enter another DeNS name]");                                   
-            NumberInput.get(tvm.functionId(onFree), "Enter your choice: ", 1,2);            
+            Terminal.print(0, "2)    [Enter another DeNS name]");
+            AmountInput.get(tvm.functionId(onFree), "Enter your choice: ", 0, 1, 2);
         }
         else if (ctx_accState == 1)
         {
@@ -318,14 +319,14 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
             Terminal.print(0, "1)    [Claim]");
             Terminal.print(0, "2)    [Reload Whois]");
             Terminal.print(0, "3)    [Enter another DeNS name]");
-            NumberInput.get(tvm.functionId(onExpired), "Enter your choice: ", 1, 3);  
+            AmountInput.get(tvm.functionId(onExpired), "Enter your choice: ", 0, 1, 3);
         }
         else 
         {
             Terminal.print(0, "1)    [Manage domain]");
             Terminal.print(0, "2)    [Reload Whois]");
             Terminal.print(0, "3)    [Enter another DeNS name]");
-            NumberInput.get(tvm.functionId(onActive), "Enter your choice: ", 1, 3);  
+            AmountInput.get(tvm.functionId(onActive), "Enter your choice: ", 0, 1, 3);
         }
     }
 
@@ -355,7 +356,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         Terminal.print(0, "7)    [Back]");     
         Terminal.print(0, "8)    [Enter another DeNS name]");    
 
-        NumberInput.get(tvm.functionId(manageMenu), "Enter your choice: ", 1, 8);    
+        AmountInput.get(tvm.functionId(manageMenu), "Enter your choice: ", 0, 1, 8);
     }
 
     //========================================
@@ -372,10 +373,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
             mainMenu();
             return;
         }
-
-        //Terminal.print(0, "Please enter amount of TONs you wish to attach to the claim message (can be 0)."); 
-        //Terminal.print(0, "NOTE: additional 1.5 TON will be added to cover all the fees, the change will be returned to Multisig.");      
-        //NumberInput.get(tvm.functionId(onClaimExpired), "Enter amount: ", 0, 999999999999999);
+        
         AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner wallet: ");  
     }
 
@@ -385,8 +383,8 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     {
              if (value == 1) {    AddressInput.get(tvm.functionId(onChangeEndpoint), "Enter new endpoint: "                      );  }
         else if (value == 2) {    AddressInput.get(tvm.functionId(onChangeOwner),    "Enter new owner: "                         );  } 
-        else if (value == 3) {    NumberInput.get(tvm.functionId(onChangeRegType),   "Enter new type (0-3): ", 0, 3              );  }
-        else if (value == 4) {    NumberInput.get(tvm.functionId(onChangePrice),     "Enter new price: ",      1, 999999999999999);  } 
+        else if (value == 3) {    AmountInput.get(tvm.functionId(onChangeRegType),   "Enter new type (0-3): ", 0, 0, 3           );  }
+        else if (value == 4) {    AmountInput.get(tvm.functionId(onChangePrice),     "Enter new price: ", 9, 1, 999999999999999  );  } 
         else if (value == 5) {    Terminal.input (tvm.functionId(onChangeComment),   "Enter new comment: ",    false             );  } 
         else if (value == 6) 
         {
