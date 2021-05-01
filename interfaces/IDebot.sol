@@ -9,6 +9,7 @@ abstract contract Debot
 {
     uint8 constant   DEBOT_ABI = 1;
     uint8            m_options;
+    optional(bytes)  m_icon;
     optional(string) m_debotAbi;
 
     /// @notice DeBot entry point.
@@ -35,6 +36,12 @@ abstract contract Debot
         m_debotAbi = dabi;
     }
 
+    function setIcon(bytes icon) public 
+    {
+        require(tvm.pubkey() == msg.pubkey(), 100);
+        tvm.accept();
+        m_icon = icon;
+    }
 }
 
 //================================================================================

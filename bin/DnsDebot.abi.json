@@ -104,9 +104,17 @@
 			]
 		},
 		{
-			"name": "onAddressCheck",
+			"name": "saveAccState",
 			"inputs": [
 				{"name":"acc_type","type":"int8"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onAddressCheck",
+			"inputs": [
+				{"name":"index","type":"uint32"}
 			],
 			"outputs": [
 			]
@@ -128,25 +136,73 @@
 			]
 		},
 		{
-			"name": "onActive",
-			"inputs": [
-				{"name":"value","type":"int256"}
-			],
-			"outputs": [
-			]
-		},
-		{
 			"name": "onExpired",
 			"inputs": [
-				{"name":"value","type":"int256"}
+				{"name":"index","type":"uint32"}
 			],
 			"outputs": [
 			]
 		},
 		{
-			"name": "manageMenu",
+			"name": "onActive",
 			"inputs": [
-				{"name":"value","type":"int256"}
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onRefreshWhois",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageEndpoint",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageOwner",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegPrice",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageComment",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegType",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageProlong",
+			"inputs": [
+				{"name":"index","type":"uint32"}
 			],
 			"outputs": [
 			]
@@ -248,6 +304,14 @@
 			"name": "setABI",
 			"inputs": [
 				{"name":"dabi","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setIcon",
+			"inputs": [
+				{"name":"icon","type":"bytes"}
 			],
 			"outputs": [
 			]
