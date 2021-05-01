@@ -5,7 +5,7 @@
 import freeton_utils
 from   freeton_utils import *
 
-class DnsDebotTEST(object):
+class DnsDebot(object):
     def __init__(self, signer: Signer):
         self.SIGNER      = generateSigner() if signer is None else signer
         self.ABI         = "../bin/DnsDebot.abi.json"
