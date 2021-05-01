@@ -12,12 +12,17 @@ Requirements: `ton-client-py` python library.
 
 Please check `tests/manual_deployment.py` example.
 
-Don't run it "as is", rather understand the syntax and change the script as you want.\
+Don't run it "as is", rather understand the syntax and change the script as you want.
 
 ```
 cd tests
 ./manual_deployment.py
 ```
+
+# REST API calls
+
+Please visit https://freeton.domains/docs for REST API info.
+
 
 # General information about claiming
 
