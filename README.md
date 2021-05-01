@@ -2,13 +2,9 @@
 
 Please visit https://freeton.domains/about for general info.
 
-# How does it work?
-
-Magic...
-
 # General information about deployment
 
-Here...
+Please visit https://freeton.domains/about for general info.
 
 # Manual deployment
 
