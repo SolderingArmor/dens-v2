@@ -489,6 +489,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         ctx_accState   = 0;
         ctx_segments   = 0;
         ctx_parent     = addressZero;
+        delete ctx_whois; // reset custom struct without specifying all the members
     }    
 
     //========================================
