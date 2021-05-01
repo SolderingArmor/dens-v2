@@ -21,7 +21,7 @@ cd tests
 
 # General information about claiming
 
-Here...
+Please visit https://freeton.domains/about for general info.
 
 # Running the tests
 
