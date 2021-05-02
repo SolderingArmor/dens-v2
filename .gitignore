@@ -1,4 +1,5 @@
 .vscode/*
 *.log
 *.sh
+*.keys.json
 *__pycache__*
