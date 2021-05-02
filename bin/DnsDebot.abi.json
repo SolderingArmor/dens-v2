@@ -3,6 +3,22 @@
 	"header": ["pubkey", "time", "expire"],
 	"functions": [
 		{
+			"name": "setDomainCode",
+			"inputs": [
+				{"name":"newDomainCode","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setDeployerCode",
+			"inputs": [
+				{"name":"newDeployerCode","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "getRequiredInterfaces",
 			"inputs": [
 			],
@@ -104,9 +120,17 @@
 			]
 		},
 		{
-			"name": "onAddressCheck",
+			"name": "saveAccState",
 			"inputs": [
 				{"name":"acc_type","type":"int8"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onAddressCheck",
+			"inputs": [
+				{"name":"index","type":"uint32"}
 			],
 			"outputs": [
 			]
@@ -128,25 +152,113 @@
 			]
 		},
 		{
-			"name": "onActive",
-			"inputs": [
-				{"name":"value","type":"int256"}
-			],
-			"outputs": [
-			]
-		},
-		{
 			"name": "onExpired",
 			"inputs": [
-				{"name":"value","type":"int256"}
+				{"name":"index","type":"uint32"}
 			],
 			"outputs": [
 			]
 		},
 		{
-			"name": "manageMenu",
+			"name": "onActive",
 			"inputs": [
-				{"name":"value","type":"int256"}
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onRefreshWhois",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageEndpoint",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageOwner",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegPrice",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageComment",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageProlong",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegType",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeFFA",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeMONEY",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeOWNER",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeDENY",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeRegType",
+			"inputs": [
+				{"name":"regType","type":"uint8"}
 			],
 			"outputs": [
 			]
@@ -163,14 +275,6 @@
 			"name": "onChangeOwner",
 			"inputs": [
 				{"name":"value","type":"address"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "onChangeRegType",
-			"inputs": [
-				{"name":"value","type":"int256"}
 			],
 			"outputs": [
 			]
@@ -197,32 +301,6 @@
 				{"name":"value","type":"int256"}
 			],
 			"outputs": [
-			]
-		},
-		{
-			"name": "_calculateDomainAddress",
-			"inputs": [
-				{"name":"domainName","type":"bytes"}
-			],
-			"outputs": [
-				{"name":"value0","type":"address"},
-				{"name":"value1","type":"cell"}
-			]
-		},
-		{
-			"name": "canProlongate",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bool"}
-			]
-		},
-		{
-			"name": "isExpired",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bool"}
 			]
 		},
 		{
@@ -253,6 +331,14 @@
 			]
 		},
 		{
+			"name": "setIcon",
+			"inputs": [
+				{"name":"icon","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "constructor",
 			"inputs": [
 			],
@@ -261,7 +347,6 @@
 		}
 	],
 	"data": [
-		{"key":1,"name":"_domainCode","type":"cell"}
 	],
 	"events": [
 	]

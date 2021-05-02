@@ -1,2 +1,4 @@
 .vscode/*
+*.log
+*.sh
 *__pycache__*

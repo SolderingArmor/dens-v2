@@ -65,7 +65,8 @@ abstract contract Upgradable
 //
 contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
 {
-    TvmCell static _domainCode;
+    TvmCell _domainCode;
+    TvmCell _deployerCode;    
     
     address  msigAddress;
     string   ctx_name;
@@ -74,9 +75,22 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     int8     ctx_accState;
     uint8    ctx_segments;
     address  ctx_parent;
-    uint256  amountToAttach;
 
     optional(uint256) emptyPk;
+
+	//========================================
+    //
+    function setDomainCode(TvmCell newDomainCode) public {
+        require(msg.pubkey() == tvm.pubkey(), 100);
+        _domainCode = newDomainCode;
+    }
+
+	//========================================
+    //
+    function setDeployerCode(TvmCell newDeployerCode) public {
+        require(msg.pubkey() == tvm.pubkey(), 100);
+        _deployerCode = newDeployerCode;
+    }    
     
 	//========================================
     //
@@ -90,23 +104,23 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     function getDebotInfo() public functionID(0xDEB) view returns(string name,     string version, string publisher, string key,  string author,
                                                                   address support, string hello,   string language,  string dabi, bytes icon)
     {
-        name      = "DnsDeBot";
-        version   = "0.1.0";
+        name      = "DeNS DeBot (Augual.TEAM)";
+        version   = "0.2.0";
         publisher = "Augual.TEAM";
-        key       = "DeBot for Augual.DeNS";
+        key       = "DeNS DeBot from Augual.TEAM";
         author    = "Augual.TEAM";
         support   = addressZero;
         hello     = "Welcome to DeNS DeBot!";
         language  = "en";
         dabi      = m_debotAbi.hasValue() ? m_debotAbi.get() : "";
-        icon      = "";
+        icon      = m_icon.hasValue()     ? m_icon.get()     : "";
     }
 
     //========================================
     /// @notice Define DeBot version and title here.
     function getVersion() public override returns (string name, uint24 semver) 
     {
-        (name, semver) = ("DnsDebot", _version(0, 1, 0));
+        (name, semver) = ("DnsDebot", _version(0, 2, 0));
     }
 
     function _version(uint24 major, uint24 minor, uint24 fix) private pure inline returns (uint24) 
@@ -134,7 +148,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     {
         _eraseCtx();
         index = 0; // shut a warning
-        Terminal.input(tvm.functionId(onPathEnter), "Enter DeNS string:", false);
+        Terminal.input(tvm.functionId(onPathEnter), "Enter domain name:", false);
     }
 
     //========================================
@@ -143,7 +157,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     {  
         msigAddress = value;
         
-        Terminal.print(0, "Please enter amount of TONs you wish to attach to the Claim message (can be 0)."); 
+        Terminal.print(0, "Please enter amount of TONs to attach to the Claim message;"); 
         Terminal.print(0, "NOTE: additional 1.5 TON will be added to cover all the fees, the change will be returned back to Multisig.");
 
         if(ctx_accState == -1 || ctx_accState == 0)
@@ -154,15 +168,11 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         {
             AmountInput.get(tvm.functionId(onClaimExpired), "Enter amount: ", 9, 0, 999999999999999);
         }
-        else 
-        {
-            // We actually caan't get here
-            
-        }
     }
 
     function onMsigEnter_2(int256 value) public 
-    {        
+    {
+        uint128 totalValue = 1.5 ton + uint128(value);
         TvmCell body = tvm.encodeBody(DnsDebot.deploy, ctx_name, msigAddress);
 
         IMsig(msigAddress).sendTransaction{
@@ -175,13 +185,13 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
             expire: 0,
             pubkey: 0x00
         }(address(this),
-          1.5 ton + uint128(value),
+          totalValue,
           false,
           1,
           body);
 
         Terminal.print(0, "Claim requested!");
-        Terminal.print(0, "Please give it ~10 seconds to process and then reload whois to get latest domain information.\n");
+        Terminal.print(0, "Please give it ~15 seconds to process and then reload whois to get latest domain information.\n");
         onPathEnter(ctx_name);
     }        
 
@@ -202,7 +212,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     function onDeploySuccess(address value) public 
     {
         address domainAddr = value;
-        Terminal.print(0, format("Domain address: 0:{:x}", domainAddr.value)); 
+        Terminal.print(0, format("Domain address: 0:{:064x}", domainAddr.value)); 
         mainMenu(0); 
     }    
 
@@ -210,7 +220,35 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     //
     function onError(uint32 sdkError, uint32 exitCode) public 
     {
-        Terminal.print(0, format("Failed! SDK Error: {}. Exit Code: {}", sdkError, exitCode));
+        if (exitCode == ERROR_MESSAGE_SENDER_IS_NOT_MY_OWNER) 
+        {
+            Terminal.print(0, "Failed! You're not the owner of this domain.");            
+        }
+        else if (exitCode == ERROR_REQUIRE_INTERNAL_MESSAGE_WITH_VALUE) 
+        {
+            Terminal.print(0, "Failed! No value attached.");            
+        } 
+        else if (exitCode == ERROR_DOMAIN_IS_EXPIRED) 
+        {
+            Terminal.print(0, "Failed! Domain is expired.");            
+        }       
+        else if (exitCode == ERROR_DOMAIN_IS_NOT_EXPIRED) 
+        {
+            Terminal.print(0, "Failed! Domain is not expired.");            
+        }            
+        else if (exitCode == ERROR_CAN_NOT_PROLONGATE_YET) 
+        {
+            Terminal.print(0, "Failed! Can't prolong yet.");            
+        }          
+        else if (exitCode == ERROR_NOT_ENOUGH_MONEY) 
+        {
+            Terminal.print(0, "Failed! Not enough value attached to cover domain price.");            
+        }                     
+        else 
+        {
+            Terminal.print(0, format("Failed! SDK Error: {}. Exit Code: {}", sdkError, exitCode));
+        }     
+
         mainMenu(0); 
     }    
  
@@ -221,11 +259,8 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         bool isValid = _validateDomainName(value);
         if(!isValid)
         {
-            Terminal.print(0, format("Domain \"{}\" is is not valid!", value));
-            Terminal.print(0, " > Domain can have up to 4 segments;");
-            Terminal.print(0, " > Each segment can have only numbers, dash \"-\" and lowercase letters;");
-            Terminal.print(0, " > Segment separator is shash \"/\";\n");
-
+            Terminal.print(0, format("Domain \"{}\" is not valid! Please, follow these rules: \n* Domain can have up to 4 segments;\n* Each segment can have only numbers, dash \"-\" and lowercase letters;\n* Segment separator is shash \"/\";", value));
+            
             mainMenu(0);
             return;
         }
@@ -238,27 +273,39 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         ctx_segments   = uint8(segments.length);
         (ctx_parent, ) = _calculateDomainAddress(parentName);
 
-        Terminal.print(0, format("Domain address: 0:{:x}", ctx_domain.value)); 
+        Terminal.print(0, format("Domain address: 0:{:064x}", ctx_domain.value)); 
 
         // TODO: add parent registration type (and price if needed) to show here
-        Sdk.getAccountType(tvm.functionId(onAddressCheck), ctx_domain);
+        Sdk.getAccountType(tvm.functionId(saveAccState), ctx_domain);
     } 
 
     //========================================
     //
-    function onAddressCheck(int8 acc_type) public 
+    function saveAccState(int8 acc_type) public 
     {
         ctx_accState = acc_type;
+        onAddressCheck(0);
+    }
+
+    //========================================
+    //
+    function onAddressCheck(uint32 index) public 
+    {
+        index = 0;
+        //ctx_accState = acc_type;
         if (ctx_accState == -1 || ctx_accState == 0) 
         {
+            Terminal.print(0, format("Domain ({}) is FREE and can be deployed.", ctx_name));
+
             MenuItem[] mi;
-            mi.push(MenuItem("Deploy and claim domain", "", tvm.functionId(onFree)  ));
-            mi.push(MenuItem("Enter another DeNS name", "", tvm.functionId(mainMenu)));
+            mi.push(MenuItem("Deploy and claim domain",   "", tvm.functionId(onFree)        ));
+            mi.push(MenuItem("<- Refresh Whois",             "", tvm.functionId(onRefreshWhois)));
+            mi.push(MenuItem("<<- Enter another domain name", "", tvm.functionId(mainMenu)      ));
             Menu.select("Enter your choice: ", "", mi);
         }
         else if (ctx_accState == 1)
         {
-            Terminal.print(0, format("Domain ({}) is ACTIVE", ctx_name));         
+            Terminal.print(0, format("Domain ({}) is ACTIVE.", ctx_name));         
             IDnsRecord(ctx_domain).getWhois{
                         abiVer: 2,
                         extMsg: true,
@@ -267,12 +314,12 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
                         expire: 0,
                         pubkey: emptyPk,
                         callbackId: tvm.functionId(onWhoIs),
-                        onErrorId: tvm.functionId(onError)
+                        onErrorId:  tvm.functionId(onError)
                         }();   
         } 
         else if (ctx_accState == 2)
         {
-            Terminal.print(0, format("Domain ({}) is FROZEN", ctx_name));
+            Terminal.print(0, format("Domain ({}) is FROZEN.", ctx_name));
             mainMenu(0); 
         }
     } 
@@ -282,7 +329,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     function onFree(uint32 index) public
     {
         index = 0; // shut a warning
-        AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner wallet: ");
+        AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner's Multisig Wallet address: ");
     }   
 
     //========================================
@@ -291,112 +338,137 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
     {
         ctx_whois = _whoisInfo;
 
-        Terminal.print(0, "");
-        Terminal.print(0, format("Domain Name: {}",          ctx_whois.domainName));            // domain name
-        Terminal.print(0, format("Domain Comment: {}",       ctx_whois.comment));               // comment
-        Terminal.print(0, format("Endpoint Address: 0:{:x}", ctx_whois.endpointAddress.value)); // endpoint address
-        Terminal.print(0, format("Owner Address: 0:{:x}",    ctx_whois.ownerAddress.value));    // owner address
-        Terminal.print(0, format("Creation Date: {}",        ctx_whois.dtCreated));             // creation date
-        Terminal.print(0, format("Expiration Date: {}",      ctx_whois.dtExpires));             // expiration date
-        Terminal.print(0, format("Last Prolong Date: {}",    ctx_whois.dtLastProlongation));    // last prolongation date
+        string regType;
 
-             if (ctx_whois.registrationType == REG_TYPE.FFA)   {    Terminal.print(0, "Registration Type: FFA");    } // subdomain registration type
-        else if (ctx_whois.registrationType == REG_TYPE.DENY)  {    Terminal.print(0, "Registration Type: DENY");   } // subdomain registration type
-        else if (ctx_whois.registrationType == REG_TYPE.OWNER) {    Terminal.print(0, "Registration Type: OWNER");  } // subdomain registration type
-        else if (ctx_whois.registrationType == REG_TYPE.MONEY) {    Terminal.print(0, "Registration Type: MONEY");  } // subdomain registration type
-        else                                                   {    Terminal.print(0, "Registration Type: OTHER");  } // subdomain registration type
-        
-        Terminal.print(0, format("Registration Price: {}", ctx_whois.registrationPrice)); // subdomain registration price
-        Terminal.print(0, "");
+        if (ctx_whois.registrationType == REG_TYPE.FFA)        {    regType = "FFA";    } //
+        else if (ctx_whois.registrationType == REG_TYPE.DENY)  {    regType = "DENY";   } //
+        else if (ctx_whois.registrationType == REG_TYPE.OWNER) {    regType = "OWNER";  } //
+        else if (ctx_whois.registrationType == REG_TYPE.MONEY) {    regType = "MONEY";  } //
+        else                                                   {    regType = "OTHER";  } //
 
-        if(now > ctx_whois.dtExpires)
+        Terminal.print(0, format("Domain Name: {}\nEndpoint Address: 0:{:064x}\nDomain Comment: {}\nOwner Address: 0:{:064x}\nCreation Date: {}\nExpiration Date: {}\nLast Prolong Date: {}\nRegistration Type: {}\nRegistration Price: {:t}", 
+        ctx_whois.domainName, 
+        ctx_whois.endpointAddress.value,       
+        ctx_whois.comment,
+        ctx_whois.ownerAddress.value,
+        ctx_whois.dtCreated,
+        ctx_whois.dtExpires,
+        ctx_whois.dtLastProlongation,
+        regType,
+        ctx_whois.registrationPrice)); 
+
+        if(_isExpired())
         {
-            Terminal.print(0, format("Domain ({}) EXPIRED! You can try and claim it.", ctx_name));
-            Terminal.print(0, "1)    [Claim]");
-            Terminal.print(0, "2)    [Reload Whois]");
-            Terminal.print(0, "3)    [Enter another DeNS name]");
-            AmountInput.get(tvm.functionId(onExpired), "Enter your choice: ", 0, 1, 3);
+            MenuItem[] miExpired;
+            miExpired.push(MenuItem("Claim domain",                   "", tvm.functionId(onExpired)     ));
+            miExpired.push(MenuItem("<- Refresh Whois",           "", tvm.functionId(onRefreshWhois)));
+            miExpired.push(MenuItem("<<- Enter another DeNS name", "", tvm.functionId(mainMenu)      ));
+
+            Menu.select(format("Domain ({}) EXPIRED and can be claimed.\nEnter your choice: ", ctx_name), "", miExpired);
         }
         else 
         {
-            Terminal.print(0, "1)    [Manage domain]");
-            Terminal.print(0, "2)    [Reload Whois]");
-            Terminal.print(0, "3)    [Enter another DeNS name]");
-            AmountInput.get(tvm.functionId(onActive), "Enter your choice: ", 0, 1, 3);
+            MenuItem[] miActive;
+            miActive.push(MenuItem("Manage domain",           "", tvm.functionId(onActive)      ));
+            miActive.push(MenuItem("<- Refresh Whois",           "", tvm.functionId(onRefreshWhois)));
+            miActive.push(MenuItem("<<- Enter another DeNS name", "", tvm.functionId(mainMenu)      ));
+
+            Menu.select("Enter your choice: ", "", miActive);
         }
     }
 
     //========================================
     //
-    function onActive(int256 value) public
+    function onExpired(uint32 index) public
     {
-        if(value == 2)
-        {
-            onAddressCheck(ctx_accState);
-            return;
-        }
-        if(value == 3)
-        {
-            mainMenu(0);
-            return;
-        }
-  
-        Terminal.print(0, "1)    [Change Endpoint]"); 
-        Terminal.print(0, "2)    [Change Owner]");      
-        Terminal.print(0, "3)    [Change Registration Type]");      
-        Terminal.print(0, "4)    [Change Registration Price]");    
-        Terminal.print(0, "5)    [Change Comment]");    
-        if (canProlongate()) {
-            Terminal.print(0, "6)    [Prolong]");    
-        } 
-        Terminal.print(0, "7)    [Back]");     
-        Terminal.print(0, "8)    [Enter another DeNS name]");    
-
-        AmountInput.get(tvm.functionId(manageMenu), "Enter your choice: ", 0, 1, 8);
+        index = 0;
+        AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner's Multisig Wallet address: ");  
     }
 
     //========================================
     //
-    function onExpired(int256 value) public
+    function onActive(uint32 index) public
     {
-        if(value == 2)
-        {
-            onAddressCheck(ctx_accState);
-            return;
-        }
-        if(value == 3)
-        {
-            mainMenu(0);
-            return;
-        }
-        
-        AddressInput.get(tvm.functionId(onMsigEnter), "Enter owner wallet: ");  
+        index = 0;
+        MenuItem[] mi;
+        if (_canProlongate()) {               
+            mi.push(MenuItem("Prolongate domain", "", tvm.functionId(onManageProlong)));
+        }          
+        mi.push(MenuItem("Change Endpoint",           "", tvm.functionId(onManageEndpoint)));
+        mi.push(MenuItem("Change Owner",              "", tvm.functionId(onManageOwner)   ));
+        mi.push(MenuItem("Change Registration Type",  "", tvm.functionId(onManageRegType) ));
+        mi.push(MenuItem("Change Registration Price", "", tvm.functionId(onManageRegPrice)));
+        mi.push(MenuItem("Change Comment",            "", tvm.functionId(onManageComment) )); 
+        mi.push(MenuItem("<- Refresh Whois",             "", tvm.functionId(onAddressCheck)  ));                                 
+        mi.push(MenuItem("<<- Enter another DeNS name",   "", tvm.functionId(mainMenu)        ));
+
+        Menu.select("Enter your choice: ", "", mi);
     }
 
     //========================================
     //
-    function manageMenu(int256 value) public 
+    function onRefreshWhois  (uint32 index) public {    index = 0;    onPathEnter(ctx_name);                                                                             } // Full refresh, refreshes account state AND whois, is needed after deployment
+    function onManageEndpoint(uint32 index) public {    index = 0;    AddressInput.get(tvm.functionId(onChangeEndpoint), "Enter new endpoint: "                    );    }
+    function onManageOwner   (uint32 index) public {    index = 0;    AddressInput.get(tvm.functionId(onChangeOwner),    "Enter new owner: "                       );    }
+    function onManageRegPrice(uint32 index) public {    index = 0;    AmountInput.get (tvm.functionId(onChangePrice),    "Enter new price: ", 9, 1, 999999999999999);    }
+    function onManageComment (uint32 index) public {    index = 0;    Terminal.input  (tvm.functionId(onChangeComment),  "Enter new comment: ", false              );    }
+
+    function onManageProlong(uint32 index) public
     {
-             if (value == 1) {    AddressInput.get(tvm.functionId(onChangeEndpoint), "Enter new endpoint: "                      );  }
-        else if (value == 2) {    AddressInput.get(tvm.functionId(onChangeOwner),    "Enter new owner: "                         );  } 
-        else if (value == 3) {    AmountInput.get(tvm.functionId(onChangeRegType),   "Enter new type (0-3): ", 0, 0, 3           );  }
-        else if (value == 4) {    AmountInput.get(tvm.functionId(onChangePrice),     "Enter new price: ", 9, 1, 999999999999999  );  } 
-        else if (value == 5) {    Terminal.input (tvm.functionId(onChangeComment),   "Enter new comment: ",    false             );  } 
-        else if (value == 6) 
-        {
-            TvmCell body = tvm.encodeBody(IDnsRecord.prolongate);
-            _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
-        } 
-        else if (value == 7)
-        {
-            // reload whois and show it one more time
-            onAddressCheck(ctx_accState);
-        }
-        else
-        {
-            mainMenu(0);
-        }                                
-    }    
+        index = 0;        
+        TvmCell body = tvm.encodeBody(IDnsRecord.prolongate);
+        _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);   
+
+        // reload whois and show it one more time
+        onAddressCheck(0);    
+    }          
+
+    function onManageRegType (uint32 index) public
+    {
+        index = 0;
+
+        MenuItem[] mi;
+        mi.push(MenuItem("FFA (Free-for-All)",           "Anyone can register subdomains without limitations", tvm.functionId(onManageRegTypeFFA)      ));
+        mi.push(MenuItem("MONEY (Payment)",           "Anyone can register subdomain with enough payment attached (specified by Registration Price) that will be sent to owner of this parent domain", tvm.functionId(onManageRegTypeMONEY)));
+        mi.push(MenuItem("OWNER (Owner only)", "Only owner can register subdomains. They can be transferred later by Change Owner procedure", tvm.functionId(onManageRegTypeOWNER)      ));
+        mi.push(MenuItem("DENY (Prohibited)", "Noone can register subdomains", tvm.functionId(onManageRegTypeDENY)      ));    
+        mi.push(MenuItem("<- Refresh Whois",             "", tvm.functionId(onAddressCheck)  ));                                 
+        mi.push(MenuItem("<<- Enter another DeNS name",   "", tvm.functionId(mainMenu)        ));                 
+
+        Menu.select("Enter your choice of rules for subdomains registration: ", "", mi);        
+    }
+
+    function onManageRegTypeFFA(uint32 index) public
+    {
+        index = 0;        
+        onChangeRegType(REG_TYPE.FFA);
+    }       
+
+    function onManageRegTypeMONEY(uint32 index) public
+    {
+        index = 0;        
+        onChangeRegType(REG_TYPE.MONEY);
+    }       
+
+    function onManageRegTypeOWNER(uint32 index) public
+    {
+        index = 0;        
+        onChangeRegType(REG_TYPE.OWNER);
+    }       
+
+    function onManageRegTypeDENY(uint32 index) public
+    {
+        index = 0;        
+        onChangeRegType(REG_TYPE.DENY);
+    }           
+
+    function onChangeRegType(REG_TYPE regType) public
+    {       
+        TvmCell body = tvm.encodeBody(IDnsRecord.changeRegistrationType, regType);
+        _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
+        // reload whois and show it one more time
+        onAddressCheck(0);    
+    }       
 
     //========================================
     //
@@ -406,7 +478,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
 
         // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
+        onAddressCheck(0);
     }      
 
     //========================================
@@ -417,28 +489,8 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
 
         // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
+        onAddressCheck(0);
     }         
-
-    //========================================
-    //
-    function onChangeRegType(int256 value) public
-    {
-        if(value >= int256(REG_TYPE.NUM))
-        {
-            Terminal.print(0, "Error! Registration Type should be between 0 and 3!");
-            
-            // Show domain management nemu again
-            onActive(1);
-            return;
-        }
-
-        TvmCell body = tvm.encodeBody(IDnsRecord.changeRegistrationType, REG_TYPE(value));
-        _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
-
-        // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
-    }     
 
     //========================================
     //
@@ -448,7 +500,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
 
         // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
+        onAddressCheck(0);
     }     
 
     //========================================
@@ -459,7 +511,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         _sendTransact(ctx_whois.ownerAddress, ctx_domain, body, 0.5 ton);
 
         // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
+        onAddressCheck(0);
     }            
 
     //========================================
@@ -470,12 +522,12 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         _sendTransact(msigAddress, ctx_domain, body, uint128(value) + 0.5 ton);
 
         // reload whois and show it one more time
-        onAddressCheck(ctx_accState);
+        onAddressCheck(0);
     }            
 
     //========================================
     //
-    function _calculateDomainAddress(string domainName) public view returns (address, TvmCell)
+    function _calculateDomainAddress(string domainName) internal view returns (address, TvmCell)
     {
         TvmCell stateInit = tvm.buildStateInit({
             contr: DnsRecord,
@@ -499,7 +551,7 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
         ctx_accState   = 0;
         ctx_segments   = 0;
         ctx_parent     = addressZero;
-        amountToAttach = 0;
+        delete ctx_whois; // reset custom struct without specifying all the members
     }    
 
     //========================================
@@ -522,9 +574,9 @@ contract DnsDebot is Debot, Upgradable, DnsFunctionsCommon
           payload);
     }        
 
-    function canProlongate() public   view returns (bool) {    return (now <= ctx_whois.dtExpires && 
+    function _canProlongate() internal   view returns (bool) {    return (now <= ctx_whois.dtExpires && 
                                                                        now >= ctx_whois.dtExpires - tenDays);  }
-    function isExpired()     public   view returns (bool) {    return  now >  ctx_whois.dtExpires;             }
+    function _isExpired()     internal   view returns (bool) {    return  now >  ctx_whois.dtExpires;             }
     // 
 }
 
