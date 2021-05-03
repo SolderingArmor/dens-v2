@@ -3,6 +3,29 @@
 	"header": ["pubkey", "time", "expire"],
 	"functions": [
 		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setDomainCode",
+			"inputs": [
+				{"name":"newDomainCode","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setDeployerCode",
+			"inputs": [
+				{"name":"newDeployerCode","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "getRequiredInterfaces",
 			"inputs": [
 			],
@@ -192,6 +215,14 @@
 			]
 		},
 		{
+			"name": "onManageProlong",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "onManageRegType",
 			"inputs": [
 				{"name":"index","type":"uint32"}
@@ -200,9 +231,41 @@
 			]
 		},
 		{
-			"name": "onManageProlong",
+			"name": "onManageRegTypeFFA",
 			"inputs": [
 				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeMONEY",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeOWNER",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onManageRegTypeDENY",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "onChangeRegType",
+			"inputs": [
+				{"name":"regType","type":"uint8"}
 			],
 			"outputs": [
 			]
@@ -219,14 +282,6 @@
 			"name": "onChangeOwner",
 			"inputs": [
 				{"name":"value","type":"address"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "onChangeRegType",
-			"inputs": [
-				{"name":"value","type":"int256"}
 			],
 			"outputs": [
 			]
@@ -253,32 +308,6 @@
 				{"name":"value","type":"int256"}
 			],
 			"outputs": [
-			]
-		},
-		{
-			"name": "_calculateDomainAddress",
-			"inputs": [
-				{"name":"domainName","type":"bytes"}
-			],
-			"outputs": [
-				{"name":"value0","type":"address"},
-				{"name":"value1","type":"cell"}
-			]
-		},
-		{
-			"name": "canProlongate",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bool"}
-			]
-		},
-		{
-			"name": "isExpired",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"value0","type":"bool"}
 			]
 		},
 		{
@@ -317,15 +346,15 @@
 			]
 		},
 		{
-			"name": "constructor",
+			"name": "_magicNumber",
 			"inputs": [
 			],
 			"outputs": [
+				{"name":"_magicNumber","type":"uint256"}
 			]
 		}
 	],
 	"data": [
-		{"key":1,"name":"_domainCode","type":"cell"}
 	],
 	"events": [
 	]

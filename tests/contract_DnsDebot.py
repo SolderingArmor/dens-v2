@@ -12,7 +12,7 @@ class DnsDebot(object):
         self.TVC         = "../bin/DnsDebot.tvc"
         self.CODE        = getCodeFromTvc("../bin/DnsRecord.tvc")
         self.CONSTRUCTOR = {}
-        self.INITDATA    = {"_domainCode": self.CODE}
+        self.INITDATA    = {}
         self.PUBKEY      = signer.keys.public
         self.ADDRESS     = getAddress(abiPath=self.ABI, tvcPath=self.TVC, signer=signer, initialPubkey=self.PUBKEY, initialData=self.INITDATA)
 

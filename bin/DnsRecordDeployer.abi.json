@@ -1,0 +1,22 @@
+{
+	"ABI version": 2,
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+				{"name":"ownerAddress","type":"address"}
+			],
+			"outputs": [
+			]
+		}
+	],
+	"data": [
+		{"key":1,"name":"_domainName","type":"bytes"},
+		{"key":2,"name":"_domainCode","type":"cell"},
+		{"key":3,"name":"_msigAddress","type":"address"},
+		{"key":4,"name":"_magicNumber","type":"uint256"}
+	],
+	"events": [
+	]
+}
