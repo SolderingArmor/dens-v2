@@ -45,7 +45,10 @@ def getAbiTvc(abiPath, tvcPath):
 # ==============================================================================
 #
 def stringToHex(inputString):
-    return inputString.encode('utf-8').hex()
+    return str(inputString).encode('utf-8').hex()
+
+def hexToString(inputHex):
+    return bytearray.fromhex(inputHex).decode()
 
 # ==============================================================================
 #
