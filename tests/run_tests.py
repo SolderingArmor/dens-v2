@@ -8,9 +8,10 @@ import unittest
 import time
 import sys
 from   pprint import pprint
-from   contract_DnsRecord     import DnsRecord
-from   contract_DnsRecordTEST import DnsRecordTEST
-from   contract_DnsDebotTEST  import DnsDebotTEST
+from   contract_DnsRecord         import DnsRecord
+from   contract_DnsRecordTEST     import DnsRecordTEST
+from   contract_DnsDebotTEST      import DnsDebotTEST
+from   contract_DnsDebot          import DnsDebot
 
 TON = 1000000000
 
@@ -42,7 +43,7 @@ for _, arg in enumerate(sys.argv[1:]):
 # EXIT CODE FOR SINGLE-MESSAGE OPERATIONS
 # we know we have only 1 internal message, that's why this wrapper has no filters
 def _getAbiArray():
-    return ["../bin/DnsRecordTEST.abi.json", "../bin/SetcodeMultisigWallet.abi.json", "../bin/DnsDebotTEST.abi.json"]
+    return ["../bin/DnsRecordTEST.abi.json", "../bin/SetcodeMultisigWallet.abi.json", "../bin/DnsDebotTEST.abi.json", "../bin/DnsRecordDeployer.abi.json"]
 
 def _getExitCode(msgIdArray):
     abiArray     = _getAbiArray()
@@ -1034,80 +1035,7 @@ class Test_15_ClaimInvalid(unittest.TestCase):
         result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
         self.assertEqual(result[1]["errorCode"], 0)
 
-# ==============================================================================
-#
-class Test_16_DeployFromDebot(unittest.TestCase):
-    
-    domain    = DnsRecordTEST(name = "nettop")
-    domain2   = DnsRecordTEST(name = "nettop/child")
-    msig      = SetcodeMultisig(signer=loadSigner(keysFile="msig.json"))
-    debot     = DnsDebotTEST(signer=loadSigner(keysFile="msig.json"))
-    
-    def test_0(self):
-        print("\n\n----------------------------------------------------------------------")
-        print("Running:", self.__class__.__name__)
-
-    # 1. Giver
-    def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.debot.ADDRESS,  TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 50)
-        
-    # 2. Deploy multisig and deployer
-    def test_2(self):
-        result = self.msig.deploy()
-        print("\nMSIG:", self.msig.ADDRESS)
-        #self.assertEqual(result[1]["errorCode"], 0)
-
-        result = self.debot.deploy()
-        result = self.debot.call(functionName="setABI", functionParams={"dabi":stringToHex(getAbi(self.debot.ABI).value)}, signer=self.debot.SIGNER)
-        print("\nDEBOT:", self.debot.ADDRESS)
-        #self.assertEqual(result[1]["errorCode"], 0)
-        
-    # 3. Deploy "net"
-    def test_3(self):
-        result = self.debot.callFromMultisig(msig=self.msig, functionName="deploy", functionParams={"domainName":self.domain.NAME_HEX, "ownerAddress":self.msig.ADDRESS}, value=TON*2, flags=1)
-        self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
-
-        #result = self.domain.callFromMultisig(msig=self.msig, functionName="changeRegistrationType", functionParams={"newType":0}, value=100000000, flags=0)
-        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
-
-        #result = self.deployer.callFromMultisig(msig=self.msig, functionName="deploy", functionParams={"domainName":self.domain2.NAME_HEX, "ownerAddress":self.msig.ADDRESS}, value=TON*2, flags=1)
-        #self.assertEqual(result[1]["errorCode"], 0)
-        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
-
-    # 4. Call change endpoint from multisig
-    def test_4(self):
-        endpoint = "0:78bf2beea2cd6ff9c78b0aca30e00fa627984dc01ad0351915002051d425f1e4"
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpoint}, value=100000000, flags=0)
-        self.assertEqual(result[1]["errorCode"], 0)
-
-        result = self.domain.run(functionName="getEndpointAddress", functionParams={})
-        self.assertEqual(result, endpoint)
-
-        # HACK expiration date, set it to be yesterday
-        result = self.domain.callFromMultisig(msig=self.msig, functionName="TEST_changeDtExpires", functionParams={"newDate":getNowTimestamp() - 60*60*24}, value=100000000, flags=1)
-        self.assertEqual(result[1]["errorCode"], 0)
-
-        #endpoint = "0:78bf2beea2cd6ff9c78b0aca30e00fa627984dc01ad0351915002051d425f1e4"
-        #result = self.domain2.callFromMultisig(msig=self.msig, functionName="changeEndpointAddress", functionParams={"newAddress":endpoint}, value=100000000, flags=0)
-        #self.assertEqual(result[1]["errorCode"], 0)
-
-        #msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
-
-        #result = self.domain2.run(functionName="getEndpointAddress", functionParams={})
-        #self.assertEqual(result, endpoint)
-
-    # 5. Cleanup
-    def test_5(self):
-        pass
-        #result = self.domain.destroy(addressDest = freeton_utils.giverGetAddress())
-        #self.assertEqual(result[1]["errorCode"], 0)
-        #result = self.domain2.destroy(addressDest = freeton_utils.giverGetAddress())
-        #self.assertEqual(result[1]["errorCode"], 0)
-        #result = self.msig.destroy(addressDest = freeton_utils.giverGetAddress())
-        #self.assertEqual(result[1]["errorCode"], 0)
+# TODO: add deploying from debot
 
 # ==============================================================================
 # 
