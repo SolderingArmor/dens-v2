@@ -6,8 +6,9 @@ import freeton_utils
 from   freeton_utils import *
 
 class DnsRecordTEST(object):
-    def __init__(self, name: str, signer: Signer = None):
+    def __init__(self, tonClient: TonClient, name: str, signer: Signer = None):
         self.SIGNER      = generateSigner() if signer is None else signer
+        self.TONCLIENT   = tonClient
         self.ABI         = "../bin/DnsRecordTEST.abi.json"
         self.TVC         = "../bin/DnsRecordTEST.tvc"
         self.CODE        = getCodeFromTvc(self.TVC)
@@ -20,11 +21,11 @@ class DnsRecordTEST(object):
 
     def deploy(self, ownerAddress: str, forceFeeReturnToOwner: bool = False):
         self.CONSTRUCTOR = {"ownerAddress": ownerAddress, "forceFeeReturnToOwner":forceFeeReturnToOwner}
-        result = deployContract(abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
+        result = deployContract(tonClient=self.TONCLIENT, abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
         return result
 
     def call(self, functionName, functionParams, signer):
-        result = callFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=signer)
+        result = callFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=signer)
         return result
 
     def callFromMultisig(self, msig: SetcodeMultisig, functionName, functionParams, value, flags):
@@ -33,7 +34,7 @@ class DnsRecordTEST(object):
         return result
 
     def run(self, functionName, functionParams):
-        result = runFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams)
+        result = runFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams)
         return result
 
     def destroy(self, addressDest):

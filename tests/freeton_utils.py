@@ -20,7 +20,6 @@ from pprint import pprint
 
 # ==============================================================================
 # 
-asyncClient   = TonClient(config=ClientConfig(network=NetworkConfig(server_address="https://net.ton.dev")))
 ZERO_PUBKEY   =   "0000000000000000000000000000000000000000000000000000000000000000"
 ZERO_ADDRESS  = "0:0000000000000000000000000000000000000000000000000000000000000000"
 MSIG_GIVER    = ""
@@ -97,11 +96,10 @@ def getValuesFromException(tonException):
 #
 def getCodeFromTvc(tvcPath):
 
-    global asyncClient
-
+    tonClient     = TonClient(config=ClientConfig())
     tvc           = getTvc(tvcPath)
     tvcCodeParams = ParamsOfGetCodeFromTvc(tvc=tvc)
-    tvcCodeResult = asyncClient.boc.get_code_from_tvc(params=tvcCodeParams).code
+    tvcCodeResult = tonClient.boc.get_code_from_tvc(params=tvcCodeParams).code
     return tvcCodeResult
 
 # ==============================================================================
@@ -122,49 +120,46 @@ def generateSigner():
 #
 def getAddress(abiPath, tvcPath, signer, initialPubkey, initialData):
 
-    global asyncClient
-
+    tonClient  = TonClient(config=ClientConfig())
     (abi, tvc) = getAbiTvc(abiPath, tvcPath)
     deploySet  = DeploySet(tvc=tvc, initial_pubkey=initialPubkey, initial_data=initialData)
 
     params     = ParamsOfEncodeMessage(abi=abi, signer=signer, deploy_set=deploySet)
-    encoded    = asyncClient.abi.encode_message(params=params)
+    encoded    = tonClient.abi.encode_message(params=params)
 
     return encoded.address
 
 # ==============================================================================
 #
 def getAddressZeroPubkey(abiPath, tvcPath, initialData):
+
     keys   = KeyPair(ZERO_PUBKEY, ZERO_PUBKEY)
     signer = Signer.Keys(keys)
     return getAddress(abiPath, tvcPath, signer, ZERO_PUBKEY, initialData)
 
 def prepareMessageBoc(abiPath, functionName, functionParams):
 
-    global asyncClient
-
-    callSet = CallSet(function_name=functionName, input=functionParams)
-    params  = ParamsOfEncodeMessageBody(abi=getAbi(abiPath), signer=Signer.NoSigner(), is_internal=True, call_set=callSet)
-    encoded = asyncClient.abi.encode_message_body(params=params)
+    tonClient = TonClient(config=ClientConfig())
+    callSet   = CallSet(function_name=functionName, input=functionParams)
+    params    = ParamsOfEncodeMessageBody(abi=getAbi(abiPath), signer=Signer.NoSigner(), is_internal=True, call_set=callSet)
+    encoded   = tonClient.abi.encode_message_body(params=params)
     return encoded.body
 
 # ==============================================================================
 # 
-def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, initialPubkey):
-
-    global asyncClient
+def deployContract(tonClient: TonClient, abiPath, tvcPath, constructorInput, initialData, signer, initialPubkey):
 
     try:
         (abi, tvc)    = getAbiTvc(abiPath, tvcPath)
         callSet       = CallSet(function_name='constructor', input=constructorInput)
         deploySet     = DeploySet(tvc=tvc, initial_pubkey=initialPubkey, initial_data=initialData)
         params        = ParamsOfEncodeMessage(abi=abi, signer=signer, call_set=callSet, deploy_set=deploySet)
-        encoded       = asyncClient.abi.encode_message(params=params)
+        encoded       = tonClient.abi.encode_message(params=params)
 
         messageParams = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
-        messageResult = asyncClient.processing.send_message(params=messageParams)
+        messageResult = tonClient.processing.send_message(params=messageParams)
         waitParams    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=messageResult.shard_block_id, send_events=False, abi=abi)
-        result        = asyncClient.processing.wait_for_transaction(params=waitParams)
+        result        = tonClient.processing.wait_for_transaction(params=waitParams)
 
         #print(result.transaction)
         return (result, {"errorCode":0, "errorMessage":"", "transactionID": "", "errorDesc": ""})
@@ -177,11 +172,9 @@ def deployContract(abiPath, tvcPath, constructorInput, initialData, signer, init
 
 # ==============================================================================
 #
-def runFunction(abiPath, contractAddress, functionName, functionParams):
+def runFunction(tonClient: TonClient, abiPath, contractAddress, functionName, functionParams):
 
-    global asyncClient
-
-    result       = getAccountGraphQL(contractAddress, "boc")
+    result       = getAccountGraphQL(tonClient, contractAddress, "boc")
     if result == "":
         return ""
     if result["boc"] is None:
@@ -191,34 +184,32 @@ def runFunction(abiPath, contractAddress, functionName, functionParams):
     abi          = getAbi(abiPath)
     callSet      = CallSet(function_name=functionName, input=functionParams)
     params       = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=Signer.NoSigner(), call_set=callSet)
-    encoded      = asyncClient.abi.encode_message(params=params)
+    encoded      = tonClient.abi.encode_message(params=params)
 
     paramsRun    = ParamsOfRunTvm(message=encoded.message, account=boc, abi=abi)
-    result       = asyncClient.tvm.run_tvm(params=paramsRun)
+    result       = tonClient.tvm.run_tvm(params=paramsRun)
 
     paramsDecode = ParamsOfDecodeMessage(abi=abi, message=result.out_messages[0])
-    decoded      = asyncClient.abi.decode_message(params=paramsDecode)
+    decoded      = tonClient.abi.decode_message(params=paramsDecode)
 
     result = decoded.value["value0"]
     return result
 
 # ==============================================================================
 #
-def callFunction(abiPath, contractAddress, functionName, functionParams, signer):
-
-    global asyncClient
+def callFunction(tonClient: TonClient, abiPath, contractAddress, functionName, functionParams, signer):
 
     try:
         abi           = getAbi(abiPath)
         callSet       = CallSet(function_name=functionName, input=functionParams)
         params        = ParamsOfEncodeMessage(abi=abi, address=contractAddress, signer=signer, call_set=callSet)
-        encoded       = asyncClient.abi.encode_message(params=params)
+        encoded       = tonClient.abi.encode_message(params=params)
 
         messageParams = ParamsOfSendMessage(message=encoded.message, send_events=False, abi=abi)
-        messageResult = asyncClient.processing.send_message(params=messageParams)
+        messageResult = tonClient.processing.send_message(params=messageParams)
 
         waitParams    = ParamsOfWaitForTransaction(message=encoded.message, shard_block_id=messageResult.shard_block_id, send_events=False, abi=abi)
-        result        = asyncClient.processing.wait_for_transaction(params=waitParams)
+        result        = tonClient.processing.wait_for_transaction(params=waitParams)
 
         return (result, {"errorCode":0, "errorMessage":"", "transactionID": "", "errorDesc": ""})
 
@@ -232,12 +223,23 @@ def callFunction(abiPath, contractAddress, functionName, functionParams, signer)
 #
 def decodeMessageBody(boc, possibleAbiFiles):
 
-    global asyncClient
+    tonClient = TonClient(config=ClientConfig())
 
+    # EXTERNAL
+    for abi in possibleAbiFiles:
+        try:
+            params = ParamsOfDecodeMessageBody(abi=getAbi(abi), body=boc, is_internal=False)
+            result = tonClient.abi.decode_message_body(params=params)
+            return (abi, result)
+
+        except TonException as ton:
+            pass
+
+    # INTERNAL
     for abi in possibleAbiFiles:
         try:
             params = ParamsOfDecodeMessageBody(abi=getAbi(abi), body=boc, is_internal=True)
-            result = asyncClient.abi.decode_message_body(params=params)
+            result = tonClient.abi.decode_message_body(params=params)
             return (abi, result)
 
         except TonException as ton:
@@ -245,50 +247,44 @@ def decodeMessageBody(boc, possibleAbiFiles):
 
     return ("", "")
 
-def getAccountGraphQL(accountID, fields):
-
-    global asyncClient
+def getAccountGraphQL(tonClient: TonClient, accountID, fields):
 
     paramsQuery = ParamsOfQuery(query="query($accnt: String){accounts(filter:{id:{eq:$accnt}}){" + fields + "}}", variables={"accnt": accountID})
-    result      = asyncClient.net.query(params=paramsQuery)
+    result      = tonClient.net.query(params=paramsQuery)
     
     if len(result.result["data"]["accounts"]) > 0:
         return result.result["data"]["accounts"][0]
     else:
         return ""
 
-def getMessageGraphQL(messageID, fields):
-
-    global asyncClient
+def getMessageGraphQL(tonClient: TonClient, messageID, fields):
 
     paramsQuery = ParamsOfQuery(query="query($msg: String){messages(filter:{id:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
-    result      = asyncClient.net.query(params=paramsQuery)
+    result      = tonClient.net.query(params=paramsQuery)
     
     if len(result.result["data"]["messages"]) > 0:
         return result.result["data"]["messages"][0]
     else:
         return ""
 
-def getTransactionGraphQL(messageID, fields):
-
-    global asyncClient
+def getTransactionGraphQL(tonClient: TonClient, messageID, fields):
 
     paramsQuery = ParamsOfQuery(query="query($msg: String){transactions(filter:{in_msg:{eq:$msg}}){" + fields + "}}", variables={"msg": messageID})
-    result      = asyncClient.net.query(params=paramsQuery)
+    result      = tonClient.net.query(params=paramsQuery)
 
     if len(result.result["data"]["transactions"]) > 0:
         return result.result["data"]["transactions"][0]
     else:
         return ""
 
-def getExitCodeFromMessageID(messageID, fields):
-    result       = getTransactionGraphQL(messageID, fields)
+def getExitCodeFromMessageID(tonClient: TonClient, messageID, fields):
+    result       = getTransactionGraphQL(tonClient, messageID, fields)
     realExitCode = result["compute"]["exit_code"]
     return realExitCode
 
 # ==============================================================================
 #
-def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
+def _unwrapMessages(tonClient: TonClient, messageID, parentMessageID, abiFilesArray):
 
     #messageFilters     = "id, src, dst, body, dst_transaction{id}, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
     # TODO: temporary fix, to exclude EVENT from calculations for now
@@ -296,14 +292,14 @@ def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
     messageFiltersFix  = "id, src, dst, body, dst_transaction{id}, value(format:DEC), ihr_fee(format:DEC), import_fee(format:DEC), fwd_fee(format:DEC)"
     transactionFilters = "status, status_name, end_status, out_msgs, outmsg_cnt, aborted, compute{exit_arg, exit_code, skipped_reason, skipped_reason_name, gas_fees(format:DEC)}, total_fees(format:DEC), storage{storage_fees_collected(format:DEC)}"
 
-    resultMsg = getMessageGraphQL(messageID, messageFilters)
+    resultMsg = getMessageGraphQL(tonClient, messageID, messageFilters)
     if resultMsg == "":
         return []
     (abi, resultMessageBody) = decodeMessageBody(resultMsg["body"], abiFilesArray)
 
     # TODO: temporary fix, to exclude EVENT from calculations for now
     if (resultMessageBody != "" and resultMessageBody.body_type != "Event") or resultMessageBody == "":
-        resultMsg = getMessageGraphQL(messageID, messageFiltersFix)
+        resultMsg = getMessageGraphQL(tonClient, messageID, messageFiltersFix)
 
     # Loop while we are waiting for all results
     resultTransaction = ""
@@ -314,7 +310,7 @@ def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
             break
         if resultMsg["dst_transaction"]["id"] is None:
             break
-        resultTransaction = getTransactionGraphQL(messageID, transactionFilters)
+        resultTransaction = getTransactionGraphQL(tonClient, messageID, transactionFilters)
         if resultTransaction != "":
             break
         else:
@@ -339,15 +335,15 @@ def _unwrapMessages(messageID, parentMessageID, abiFilesArray):
 
     if resultTransaction != "":
         for msg in resultTransaction["out_msgs"]:
-            arrayResult = _unwrapMessages(msg, messageID, abiFilesArray)
+            arrayResult = _unwrapMessages(tonClient, msg, messageID, abiFilesArray)
             arrayMsg   += arrayResult
     
     return arrayMsg
 
-def unwrapMessages(messageIdArray, abiFilesArray):
+def unwrapMessages(tonClient: TonClient, messageIdArray, abiFilesArray):
     arrayMsg = []
     for msg in messageIdArray:
-        arrayResult = _unwrapMessages(msg, "", abiFilesArray)
+        arrayResult = _unwrapMessages(tonClient, msg, "", abiFilesArray)
         arrayMsg   += arrayResult
     
     return arrayMsg
@@ -355,8 +351,9 @@ def unwrapMessages(messageIdArray, abiFilesArray):
 # ==============================================================================
 #
 class SetcodeMultisig(object):
-    def __init__(self, signer: Signer = None):
+    def __init__(self, tonClient: TonClient, signer: Signer = None):
         self.SIGNER      = generateSigner() if signer is None else signer
+        self.TONCLIENT   = tonClient
         self.ABI         = "../bin/SetcodeMultisigWallet.abi.json"
         self.TVC         = "../bin/SetcodeMultisigWallet.tvc"
         self.CONSTRUCTOR = {"owners":["0x" + self.SIGNER.keys.public],"reqConfirms":"1"}
@@ -365,11 +362,11 @@ class SetcodeMultisig(object):
         self.ADDRESS     = getAddress(abiPath=self.ABI, tvcPath=self.TVC, signer=self.SIGNER, initialPubkey=self.SIGNER.keys.public, initialData=self.INITDATA)
 
     def deploy(self):
-        result = deployContract(abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
+        result = deployContract(tonClient=self.TONCLIENT, abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
         return result
 
     def call(self, functionName, functionParams):
-        result = callFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=self.SIGNER)
+        result = callFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=self.SIGNER)
         return result
 
     def callTransfer(self, addressDest, value, payload, flags):
@@ -377,11 +374,11 @@ class SetcodeMultisig(object):
         return result
 
     def run(self, functionName, functionParams):
-        result = runFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams)
+        result = runFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams)
         return result
 
     def destroy(self, addressDest):
-        result = callFunction(abiPath=self.ABI, contractAddress=self.ADDRESS, functionName="sendTransaction", functionParams={"dest":addressDest, "value":0, "bounce":False, "flags":128+32, "payload":""}, signer=self.SIGNER)
+        result = callFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName="sendTransaction", functionParams={"dest":addressDest, "value":0, "bounce":False, "flags":128+32, "payload":""}, signer=self.SIGNER)
         return result
 
 # ==============================================================================
@@ -394,10 +391,10 @@ def giverGetAddress():
         return "0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94"
     else:
         signer = loadSigner(MSIG_GIVER)
-        msig   = SetcodeMultisig(signer=signer)
+        msig   = SetcodeMultisig(tonClient=TonClient(config=ClientConfig()), signer=signer)
         return msig.ADDRESS
 
-def giverGive(contractAddress, amountTons):
+def giverGive(tonClient: TonClient, contractAddress, amountTons):
     
     if not USE_GIVER:
         print("\nNow GIVER expects to give {} TONs to address {};".format(amountTons, contractAddress))
@@ -407,7 +404,7 @@ def giverGive(contractAddress, amountTons):
     global MSIG_GIVER
     if MSIG_GIVER == "":
         giverAddress = giverGetAddress()
-        callFunction("../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
+        callFunction(tonClient, "../bin/local_giver.abi.json", giverAddress, "sendGrams", {"dest":contractAddress,"amount":amountTons}, Signer.NoSigner())
     else:
         signer = loadSigner(MSIG_GIVER)
         msig   = SetcodeMultisig(signer=signer)

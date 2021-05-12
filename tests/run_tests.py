@@ -13,7 +13,15 @@ from   contract_DnsRecordTEST     import DnsRecordTEST
 from   contract_DnsDebotTEST      import DnsDebotTEST
 from   contract_DnsDebot          import DnsDebot
 
-TON = 1000000000
+# ==============================================================================
+#
+TON            = 1000000000
+SERVER_ADDRESS = "https://net.ton.dev"
+
+# ==============================================================================
+#
+def getClient():
+    return TonClient(config=ClientConfig(network=NetworkConfig(server_address=SERVER_ADDRESS)))
 
 # ==============================================================================
 # 
@@ -31,7 +39,7 @@ for _, arg in enumerate(sys.argv[1:]):
 
     if arg.startswith("http"):
         
-        freeton_utils.asyncClient = TonClient(config=ClientConfig(network=NetworkConfig(server_address=arg)))
+        SERVER_ADDRESS = arg
         sys.argv.remove(arg)
 
     if arg.startswith("--msig-giver"):
@@ -47,7 +55,7 @@ def _getAbiArray():
 
 def _getExitCode(msgIdArray):
     abiArray     = _getAbiArray()
-    msgArray     = unwrapMessages(msgIdArray, abiArray)
+    msgArray     = unwrapMessages(getClient(), msgIdArray, abiArray)
     if msgArray != "":
         realExitCode = msgArray[0]["TX_DETAILS"]["compute"]["exit_code"]
     else:
@@ -58,8 +66,8 @@ def _getExitCode(msgIdArray):
 # 
 class Test_01_SameNameDeploy(unittest.TestCase):
 
-    domain = DnsRecordTEST(name = "org")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name = "org")
+    msig   = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -67,8 +75,8 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -96,8 +104,8 @@ class Test_01_SameNameDeploy(unittest.TestCase):
 #
 class Test_02_DeployWithMultisigOwner(unittest.TestCase):
     
-    domain = DnsRecordTEST(name = "net")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name = "net")
+    msig   = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -105,8 +113,8 @@ class Test_02_DeployWithMultisigOwner(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -139,22 +147,22 @@ class Test_02_DeployWithMultisigOwner(unittest.TestCase):
 class Test_03_WrongNames(unittest.TestCase):
     
     domainDictList = [
-        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "org-org")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ORG")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "F@!#ING")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "ddd//dd")},
-        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "ff/ff")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "//")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "under_score")},
-        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "good-domain-name-with-31-letter")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "perfectly000fine000domain000name000with63letters000inside000kek")},
-        {"CODE": 0,   "DOMAIN": DnsRecordTEST(name = "one/two/three/four")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "one/two/three/four/five")},
-        {"CODE": 200, "DOMAIN": DnsRecordTEST(name = "too000long000domain000name000with64letters000inside000kekekelolz")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "org-org")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "ORG")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "F@!#ING")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "ddd//dd")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "ff/ff")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "//")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "under_score")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "good-domain-name-with-31-letter")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "perfectly000fine000domain000name000with63letters000inside000kek")},
+        {"CODE": 0,   "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "one/two/three/four")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "one/two/three/four/five")},
+        {"CODE": 200, "DOMAIN": DnsRecordTEST(tonClient=getClient(), name = "too000long000domain000name000with64letters000inside000kekekelolz")},
     ]
 
-    msig   = SetcodeMultisig()
+    msig   = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -163,8 +171,8 @@ class Test_03_WrongNames(unittest.TestCase):
     # 1. Giver
     def test_1(self):
         for rec in self.domainDictList:
-            giverGive(rec["DOMAIN"].ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS, TON * 1)
+            giverGive(getClient(), rec["DOMAIN"].ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS, TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -187,8 +195,8 @@ class Test_03_WrongNames(unittest.TestCase):
 #
 class Test_04_Prolongate(unittest.TestCase):
     
-    domain = DnsRecordTEST(name = "net")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name = "net")
+    msig   = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -196,8 +204,8 @@ class Test_04_Prolongate(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -262,10 +270,10 @@ class Test_04_Prolongate(unittest.TestCase):
 #
 class Test_05_ClaimFFA(unittest.TestCase):
     
-    domain_net     = DnsRecordTEST(name="net")
-    domain_net_kek = DnsRecordTEST(name="net/kek")
-    msig1          = SetcodeMultisig()
-    msig2          = SetcodeMultisig()
+    domain_net     = DnsRecordTEST(tonClient=getClient(), name="net")
+    domain_net_kek = DnsRecordTEST(tonClient=getClient(), name="net/kek")
+    msig1          = SetcodeMultisig(tonClient=getClient())
+    msig2          = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -273,10 +281,10 @@ class Test_05_ClaimFFA(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_net.ADDRESS,     TON * 1)
-        giverGive(self.domain_net_kek.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,          TON * 1)
-        giverGive(self.msig2.ADDRESS,          TON * 1)
+        giverGive(getClient(), self.domain_net.ADDRESS,     TON * 1)
+        giverGive(getClient(), self.domain_net_kek.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,          TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,          TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -312,7 +320,7 @@ class Test_05_ClaimFFA(unittest.TestCase):
 
         result = self.domain_net_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_net_kek.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["ownerAddress"], self.msig2.ADDRESS)
@@ -333,10 +341,10 @@ class Test_05_ClaimFFA(unittest.TestCase):
 # 
 class Test_06_ClaimMoney(unittest.TestCase):
 
-    domain_domaino     = DnsRecordTEST(name="domaino")
-    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = SetcodeMultisig()
-    msig2              = SetcodeMultisig()
+    domain_domaino     = DnsRecordTEST(tonClient=getClient(), name="domaino")
+    domain_domaino_kek = DnsRecordTEST(tonClient=getClient(), name="domaino/kek")
+    msig1              = SetcodeMultisig(tonClient=getClient())
+    msig2              = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -344,10 +352,10 @@ class Test_06_ClaimMoney(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_domaino.ADDRESS,     TON * 1)
-        giverGive(self.domain_domaino_kek.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,              TON * 1)
-        giverGive(self.msig2.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.domain_domaino.ADDRESS,     TON * 1)
+        giverGive(getClient(), self.domain_domaino_kek.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,              TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -375,7 +383,7 @@ class Test_06_ClaimMoney(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         #
-        result = getAccountGraphQL(self.msig1.ADDRESS, "balance(format:DEC)")
+        result = getAccountGraphQL(getClient(), self.msig1.ADDRESS, "balance(format:DEC)")
         balanceBefore = int(result["balance"])
 
         # Claim
@@ -383,14 +391,14 @@ class Test_06_ClaimMoney(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
 
         # Include all the fees into calculation (when multisig receives transfer it pays fees too)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         #pprint(msgArray)
         for msg in msgArray:
             if msg["DEST"] == self.msig1.ADDRESS:
                 balanceBefore -= int(msg["TX_DETAILS"]["total_fees"])
 
         # Check new parent balance
-        result = getAccountGraphQL(self.msig1.ADDRESS, "balance(format:DEC)")
+        result = getAccountGraphQL(getClient(), self.msig1.ADDRESS, "balance(format:DEC)")
         balanceAfter = int(result["balance"])
         self.assertEqual(balanceAfter, balanceBefore + regPrice)
 
@@ -414,10 +422,10 @@ class Test_06_ClaimMoney(unittest.TestCase):
 # 
 class Test_07_ClaimOwner(unittest.TestCase):
 
-    domain_domaino     = DnsRecordTEST(name="domaino")
-    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = SetcodeMultisig()
-    msig2              = SetcodeMultisig()
+    domain_domaino     = DnsRecordTEST(tonClient=getClient(), name="domaino")
+    domain_domaino_kek = DnsRecordTEST(tonClient=getClient(), name="domaino/kek")
+    msig1              = SetcodeMultisig(tonClient=getClient())
+    msig2              = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -425,10 +433,10 @@ class Test_07_ClaimOwner(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_domaino.ADDRESS,     TON * 1)
-        giverGive(self.domain_domaino_kek.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,              TON * 1)
-        giverGive(self.msig2.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.domain_domaino.ADDRESS,     TON * 1)
+        giverGive(getClient(), self.domain_domaino_kek.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,              TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -455,7 +463,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
 
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 self.assertEqual(msg["FUNCTION_PARAMS"]["result"], "2") # DENIED
@@ -464,7 +472,7 @@ class Test_07_ClaimOwner(unittest.TestCase):
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig1.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         #pprint(msgArray)
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
@@ -490,10 +498,10 @@ class Test_07_ClaimOwner(unittest.TestCase):
 # 
 class Test_08_ClaimDeny(unittest.TestCase):       
 
-    domain_net     = DnsRecordTEST(name="net")
-    domain_net_kek = DnsRecordTEST(name="net/kek")
-    msig1          = SetcodeMultisig()
-    msig2          = SetcodeMultisig()
+    domain_net     = DnsRecordTEST(tonClient=getClient(), name="net")
+    domain_net_kek = DnsRecordTEST(tonClient=getClient(), name="net/kek")
+    msig1          = SetcodeMultisig(tonClient=getClient())
+    msig2          = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -501,10 +509,10 @@ class Test_08_ClaimDeny(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_net.ADDRESS,     TON * 1)
-        giverGive(self.domain_net_kek.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,          TON * 1)
-        giverGive(self.msig2.ADDRESS,          TON * 1)
+        giverGive(getClient(), self.domain_net.ADDRESS,     TON * 1)
+        giverGive(getClient(), self.domain_net_kek.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,          TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,          TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -541,7 +549,7 @@ class Test_08_ClaimDeny(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 regResult = msg["FUNCTION_PARAMS"]["result"]
@@ -566,8 +574,8 @@ class Test_08_ClaimDeny(unittest.TestCase):
 # 
 class Test_09_RegisterWithNoParent(unittest.TestCase):
 
-    domain = DnsRecordTEST(name="net/some/shit")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name="net/some/shit")
+    msig   = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -575,8 +583,8 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -594,7 +602,7 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check onBounce/aborted
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "receiveRegistrationRequest":
                 regResult = msg["TX_DETAILS"]["aborted"]
@@ -615,10 +623,10 @@ class Test_09_RegisterWithNoParent(unittest.TestCase):
 # 
 class Test_10_CheckWhoisStatistics(unittest.TestCase):       
 
-    domain_domaino     = DnsRecordTEST(name="domaino")
-    domain_domaino_kek = DnsRecordTEST(name="domaino/kek")
-    msig1              = SetcodeMultisig()
-    msig2              = SetcodeMultisig()
+    domain_domaino     = DnsRecordTEST(tonClient=getClient(), name="domaino")
+    domain_domaino_kek = DnsRecordTEST(tonClient=getClient(), name="domaino/kek")
+    msig1              = SetcodeMultisig(tonClient=getClient())
+    msig2              = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -626,10 +634,10 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_domaino.ADDRESS,     TON * 1)
-        giverGive(self.domain_domaino_kek.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,              TON * 1)
-        giverGive(self.msig2.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.domain_domaino.ADDRESS,     TON * 1)
+        giverGive(getClient(), self.domain_domaino_kek.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,              TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,              TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -673,13 +681,13 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         # Deny subdomain registration 
         result = self.domain_domaino.callFromMultisig(msig=self.msig1, functionName="changeRegistrationType", functionParams={"newType":3}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
         # Check registration result
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 regResult = msg["FUNCTION_PARAMS"]["result"]
@@ -699,7 +707,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
         
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
         for msg in msgArray:
             if msg["FUNCTION_NAME"] == "callbackOnRegistrationRequest":
                 regResult = msg["FUNCTION_PARAMS"]["result"]
@@ -708,7 +716,7 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
         # Claim
         result = self.domain_domaino_kek.callFromMultisig(msig=self.msig1, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=700000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_domaino.run(functionName="getWhois", functionParams={})
         self.assertEqual(result["subdomainRegAccepted"], "1"       )
@@ -734,8 +742,8 @@ class Test_10_CheckWhoisStatistics(unittest.TestCase):
 # 
 class Test_11_ChangeWhois(unittest.TestCase):   
     
-    domain = DnsRecordTEST(name="domaino")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name="domaino")
+    msig   = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -743,8 +751,8 @@ class Test_11_ChangeWhois(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -782,8 +790,8 @@ class Test_11_ChangeWhois(unittest.TestCase):
 # 
 class Test_12_ReleaseDomain(unittest.TestCase): 
     
-    domain = DnsRecordTEST(name="dominos")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name="dominos")
+    msig   = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -791,8 +799,8 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -828,9 +836,9 @@ class Test_12_ReleaseDomain(unittest.TestCase):
 # 
 class Test_13_ClaimAlreadyClaimed(unittest.TestCase):       
 
-    domain = DnsRecordTEST(name="domaino")
-    msig1  = SetcodeMultisig()
-    msig2  = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name="domaino")
+    msig1  = SetcodeMultisig(tonClient=getClient())
+    msig2  = SetcodeMultisig(tonClient=getClient())
     
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -838,9 +846,9 @@ class Test_13_ClaimAlreadyClaimed(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,  TON * 1)
-        giverGive(self.msig2.ADDRESS,  TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,  TON * 1)
+        giverGive(getClient(), self.msig2.ADDRESS,  TON * 1)
         
     # 2. Deploy multisig
     def test_2(self):
@@ -880,14 +888,14 @@ class Test_13_ClaimAlreadyClaimed(unittest.TestCase):
 #
 class Test_14_LongestName(unittest.TestCase):
     
-    domain_1     = DnsRecordTEST(name="1234567890123456789012345678901")
-    domain_2     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901")
-    domain_3     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
-    domain_4     = DnsRecordTEST(name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
-    msig1        = SetcodeMultisig()
-    msig2        = SetcodeMultisig()
-    msig3        = SetcodeMultisig()
-    msig4        = SetcodeMultisig()
+    domain_1     = DnsRecordTEST(tonClient=getClient(), name="1234567890123456789012345678901")
+    domain_2     = DnsRecordTEST(tonClient=getClient(), name="1234567890123456789012345678901/1234567890123456789012345678901")
+    domain_3     = DnsRecordTEST(tonClient=getClient(), name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
+    domain_4     = DnsRecordTEST(tonClient=getClient(), name="1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901/1234567890123456789012345678901")
+    msig1        = SetcodeMultisig(tonClient=getClient())
+    msig2        = SetcodeMultisig(tonClient=getClient())
+    msig3        = SetcodeMultisig(tonClient=getClient())
+    msig4        = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -895,14 +903,14 @@ class Test_14_LongestName(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain_1.ADDRESS, TON * 1)
-        giverGive(self.domain_2.ADDRESS, TON * 1)
-        giverGive(self.domain_3.ADDRESS, TON * 1)
-        giverGive(self.domain_4.ADDRESS, TON * 1)
-        giverGive(self.msig1.ADDRESS,    TON * 2)
-        giverGive(self.msig2.ADDRESS,    TON * 2)
-        giverGive(self.msig3.ADDRESS,    TON * 2)
-        giverGive(self.msig4.ADDRESS,    TON * 2)
+        giverGive(getClient(), self.domain_1.ADDRESS, TON * 1)
+        giverGive(getClient(), self.domain_2.ADDRESS, TON * 1)
+        giverGive(getClient(), self.domain_3.ADDRESS, TON * 1)
+        giverGive(getClient(), self.domain_4.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig1.ADDRESS,    TON * 2)
+        giverGive(getClient(), self.msig2.ADDRESS,    TON * 2)
+        giverGive(getClient(), self.msig3.ADDRESS,    TON * 2)
+        giverGive(getClient(), self.msig4.ADDRESS,    TON * 2)
 
     # 2. Deploy multisig
     def test_2(self):
@@ -942,7 +950,7 @@ class Test_14_LongestName(unittest.TestCase):
         # 2
         result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig2.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_2.callFromMultisig(msig=self.msig2, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
@@ -954,7 +962,7 @@ class Test_14_LongestName(unittest.TestCase):
         # 3
         result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig3.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_3.callFromMultisig(msig=self.msig3, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
@@ -966,7 +974,7 @@ class Test_14_LongestName(unittest.TestCase):
         # 4
         result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="claimExpired", functionParams={"newOwnerAddress":self.msig4.ADDRESS, "forceFeeReturnToOwner":False}, value=TON, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
-        msgArray = unwrapMessages(result[0].transaction["out_msgs"], _getAbiArray())
+        msgArray = unwrapMessages(getClient(), result[0].transaction["out_msgs"], _getAbiArray())
 
         result = self.domain_4.callFromMultisig(msig=self.msig4, functionName="changeRegistrationType", functionParams={"newType":1}, value=100000000, flags=1)
         self.assertEqual(result[1]["errorCode"], 0)
@@ -999,8 +1007,8 @@ class Test_14_LongestName(unittest.TestCase):
 #
 class Test_15_ClaimInvalid(unittest.TestCase):
     
-    domain = DnsRecordTEST(name = "netOVKA")
-    msig   = SetcodeMultisig()
+    domain = DnsRecordTEST(tonClient=getClient(), name = "netOVKA")
+    msig   = SetcodeMultisig(tonClient=getClient())
 
     def test_0(self):
         print("\n\n----------------------------------------------------------------------")
@@ -1008,8 +1016,8 @@ class Test_15_ClaimInvalid(unittest.TestCase):
 
     # 1. Giver
     def test_1(self):
-        giverGive(self.domain.ADDRESS, TON * 1)
-        giverGive(self.msig.ADDRESS,   TON * 1)
+        giverGive(getClient(), self.domain.ADDRESS, TON * 1)
+        giverGive(getClient(), self.msig.ADDRESS,   TON * 1)
 
     # 2. Deploy multisig
     def test_2(self):
