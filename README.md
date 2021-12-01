@@ -1,10 +1,10 @@
 # Description
 
-Please visit https://freeton.domains/about for general info.
+Please visit https://scale.domains/about for general info.
 
 # General information about deployment
 
-Please visit https://freeton.domains/about for general info.
+Please visit https://scale.domains/about for general info.
 
 # Manual deployment
 
@@ -21,12 +21,12 @@ cd tests
 
 # REST API calls
 
-Please visit https://freeton.domains/docs for REST API info.
+Please visit https://scale.domains/docs for REST API info.
 
 
 # General information about claiming
 
-Please visit https://freeton.domains/about for general info.
+Please visit https://scale.domains/about for general info.
 
 # Running the tests
 
