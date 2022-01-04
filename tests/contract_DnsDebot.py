@@ -2,8 +2,8 @@
 
 # ==============================================================================
 #
-import freeton_utils
-from   freeton_utils import *
+import ever_utils
+from   ever_utils import *
 
 class DnsDebot(object):
     def __init__(self, tonClient: TonClient, signer: Signer):

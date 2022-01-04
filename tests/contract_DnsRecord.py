@@ -2,39 +2,71 @@
 
 # ==============================================================================
 #
-import freeton_utils
-from   freeton_utils import *
+import ever_utils
+from   ever_utils import *
 
-class DnsRecord(object):
-    def __init__(self, tonClient: TonClient, name: str, signer: Signer = None):
-        self.SIGNER      = generateSigner() if signer is None else signer
-        self.TONCLIENT   = tonClient
-        self.ABI         = "../bin/DnsRecord.abi.json"
-        self.TVC         = "../bin/DnsRecord.tvc"
-        self.CODE        = getCodeFromTvc(self.TVC)
-        self.CONSTRUCTOR = {}
-        self.INITDATA    = {"_domainName":stringToHex(name),"_domainCode": self.CODE}
-        self.PUBKEY      = ZERO_PUBKEY
-        self.ADDRESS     = getAddressZeroPubkey(abiPath=self.ABI, tvcPath=self.TVC, initialData=self.INITDATA)
-        self.NAME        = name
-        self.NAME_HEX    = stringToHex(name)
-
-    def deploy(self, ownerAddress: str, forceFeeReturnToOwner: bool = False):
+class DnsRecord(BaseContract):
+    
+    def __init__(self, everClient: TonClient, name: str, ownerAddress: str, forceFeeReturnToOwner: bool = False, signer: Signer = None):
+        genSigner = generateSigner() if signer is None else signer
         self.CONSTRUCTOR = {"ownerAddress": ownerAddress, "forceFeeReturnToOwner":forceFeeReturnToOwner}
-        result = deployContract(tonClient=self.TONCLIENT, abiPath=self.ABI, tvcPath=self.TVC, constructorInput=self.CONSTRUCTOR, initialData=self.INITDATA, signer=self.SIGNER, initialPubkey=self.PUBKEY)
+        self.INITDATA    = {"_domainName":stringToHex(name), "_domainCode":getCodeFromTvc("../bin/DnsRecord.tvc")}
+        BaseContract.__init__(self, everClient=everClient, contractName="DnsRecord", pubkey=ZERO_PUBKEY, signer=genSigner)
+
+    #========================================
+    #
+    def changeEndpointAddress(self, msig: Multisig, newAddress: str):
+        result = self._callFromMultisig(msig=msig, functionName="changeEndpointAddress", functionParams={"newAddress":newAddress}, value=DIME, flags=1)
         return result
 
-    def call(self, functionName, functionParams, signer):
-        result = callFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams, signer=signer)
+    def changeOwner(self, msig: Multisig, newOwnerAddress: str):
+        result = self._callFromMultisig(msig=msig, functionName="changeOwner", functionParams={"newOwnerAddress":newOwnerAddress}, value=DIME, flags=1)
         return result
 
-    def callFromMultisig(self, msig: SetcodeMultisig, functionName, functionParams, value, flags):
-        messageBoc = prepareMessageBoc(abiPath=self.ABI, functionName=functionName, functionParams=functionParams)
-        result     = msig.callTransfer(addressDest=self.ADDRESS, value=value, payload=messageBoc, flags=flags)
+    def changeRegistrationType(self, msig: Multisig, newType: int):
+        result = self._callFromMultisig(msig=msig, functionName="changeRegistrationType", functionParams={"newType":newType}, value=DIME, flags=1)
         return result
 
-    def run(self, functionName, functionParams):
-        result = runFunction(tonClient=self.TONCLIENT, abiPath=self.ABI, contractAddress=self.ADDRESS, functionName=functionName, functionParams=functionParams)
+    def changeRegistrationPrice(self, msig: Multisig, newPrice: int):
+        result = self._callFromMultisig(msig=msig, functionName="changeRegistrationPrice", functionParams={"newPrice":newPrice}, value=DIME, flags=1)
+        return result
+
+    def changeComment(self, msig: Multisig, newComment: str):
+        result = self._callFromMultisig(msig=msig, functionName="changeComment", functionParams={"newComment":stringToHex(newComment)}, value=DIME, flags=1)
+        return result
+
+    def prolongate(self, msig: Multisig):
+        result = self._callFromMultisig(msig=msig, functionName="prolongate", functionParams={}, value=DIME*5, flags=1)
+        return result
+
+    def claimExpired(self, msig: Multisig, newOwnerAddress: str, forceFeeReturnToOwner: bool = False, value: int = EVER):
+        result = self._callFromMultisig(msig=msig, functionName="claimExpired", functionParams={"newOwnerAddress":newOwnerAddress, "forceFeeReturnToOwner":forceFeeReturnToOwner}, value=value, flags=1)
+        return result
+
+    def releaseDomain(self, msig: Multisig):
+        result = self._callFromMultisig(msig=msig, functionName="releaseDomain", functionParams={}, value=DIME*5, flags=1)
+        return result
+    
+    #========================================
+    #
+    def getDomainCode(self):
+        result = self._run(functionName="getDomainCode", functionParams={})
+        return result
+
+    def canProlongate(self):
+        result = self._run(functionName="canProlongate", functionParams={})
+        return result
+
+    def isExpired(self):
+        result = self._run(functionName="isExpired", functionParams={})
+        return result
+
+    def getWhois(self):
+        result = self._run(functionName="getWhois", functionParams={})
+        return result
+
+    def getEndpointAddress(self):
+        result = self._run(functionName="getEndpointAddress", functionParams={})
         return result
 
 # ==============================================================================

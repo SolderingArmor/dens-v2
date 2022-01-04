@@ -2,45 +2,49 @@
 
 # ==============================================================================
 # 
-import freeton_utils
-from   freeton_utils import *
+import ever_utils
+from   ever_utils import *
 from   contract_DnsRecord import DnsRecord
 from   pprint import pprint
 
-TON    = 1000000000
-SERVER = "http://localhost"
-freeton_utils.asyncClient = TonClient(config=ClientConfig(network=NetworkConfig(server_address=SERVER)))
+SERVER_ADDRESS = "http://localhost"
+#SERVER_ADDRESS = "https://net.ton.dev"
+#SERVER_ADDRESS = "https://gql.custler.net"
+
+# ==============================================================================
+#
+def getClient():
+    return getEverClient(testnet=False, customServer=SERVER_ADDRESS)
 
 # ==============================================================================
 # 
-# Create a DnsRecord class with "freeton" name
-domain = DnsRecord(name="freeton/something")
-
 # Create a Multisig class with a random keypair
-msig   = SetcodeMultisig()
+msig = Multisig(everClient=getClient())
+
+# Create a DnsRecord class with "freeton" name
+domain = DnsRecord(everClient=getClient(), name="everscale", ownerAddress=msig.ADDRESS)
+
 
 # If you want Multisig with a keypair from file, use this syntax:
-#msig = SetcodeMultisig(signer=loadSigner(keysFile="msig.json"))
+#msig = Multisig(signer=loadSigner(keysFile="msig.json"))
 
 # Giver for TON OS SE
-giverGive(contractAddress=domain.ADDRESS, amountTons=TON*1)
-giverGive(contractAddress=msig.ADDRESS,   amountTons=TON*1)
+giverGive(everClient=getClient(), contractAddress=domain.ADDRESS, amountEvers=EVER*2)
+giverGive(everClient=getClient(), contractAddress=msig.ADDRESS,   amountEvers=EVER*2)
 
 # Deploy DnsRecord with SetcodeMultisig address as owner;
-result = domain.deploy(ownerAddress = msig.ADDRESS)
-pprint(result[0].transaction)
-pprint(result[1])
+result = msig.deploy()
+result = domain.deploy()
+unwrapMessages(result=result, everClient=getClient())
 
 # Claim domain; this is not needed for top-level domains;
 # Change "value=TON" to the required amount; don't forget to add extra 0.5 TON to pay all fes, all change will be returned to SetcodeMultisig;
-result   = domain.callFromMultisig(msig=msig, functionName="claimExpired", functionParams={"newOwnerAddress":msig.ADDRESS}, value=TON, flags=1)
-msgArray = unwrapMessages(result[0].transaction["out_msgs"], ["../contracts/DnsRecord.abi.json"])
-pprint(msgArray)
+result = domain.claimExpired(msig=msig, newOwnerAddress=msig.ADDRESS)
+unwrapMessages(result=result, everClient=getClient())
 
 # Check Whois
-result = domain.run(functionName="getWhois", functionParams={})
+result = domain.getWhois()
 pprint(result)
 
 # To call any DnsRecord function from Multisig use this syntax:
-#domain.callFromMultisig(msig=msig, functionName="claimExpired",  functionParams={"newComment":stringToHex("custom comment")}, value=100000000, flags=1)
-#domain.callFromMultisig(msig=msig, functionName="changeComment", functionParams={"newOwnerAddress": msig.ADDRESS}, value=100000000, flags=1)
+#domain.changeComment(msig=msig, newComment="custom comment")
